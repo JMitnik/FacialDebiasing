@@ -116,7 +116,7 @@ class Decoder(nn.Module):
 
 class Db_vae(nn.Module):
 
-    def __init__(self, hidden_dim=500, z_dim=20, device="cpu"):
+    def __init__(self, z_dim=20, hist_size=10000, device="cpu"):
         super().__init__()
 
         self.device = device
@@ -125,6 +125,14 @@ class Db_vae(nn.Module):
         self.encoder = Encoder(z_dim)
         self.decoder = Decoder(z_dim)
 
+        self.histo = torch.zeros((z_dim, hist_size))
+
+        self.target_dist = torch.distributions.normal.Normal(0, 1)
+
+        self.c1 = 1
+        self.c2 = 1
+        self.c3 = 1
+
     def forward(self, input):
         """
         Given input, perform an encoding and decoding step and return the
@@ -132,23 +140,52 @@ class Db_vae(nn.Module):
         """
         pred, mean, log_std = self.encoder(input)
 
-        std = torch.exp(log_std).to(self.device)
-
-        epsilon = torch.randn(self.z_dim).to(self.device)
-
-        z = mean + epsilon * std
+        dist = torch.distributions.normal.Normal(mean, torch.exp(log_std))
+        # Get single samples from the distributions with reparametrisation trick
+        z = dist.rsample().to(self.device)
 
         res = self.decoder(z)
 
-        print(torch.min(res), torch.max(res))
+        # TODO:
+        # Change losses of VAE part only towards those of the actual faces.
+        # Also shouldnt feed those to the decoder, waste of time
+
+        loss_recon = F.l1_loss(res, input, reduction='sum')
+        loss_kl = F.kl_div(z, self.target_dist, reduction='sum')
+
+        # TODO:
+        # Acc of the classfication should be added properly - Requires some 
+        # extra target input
+        loss_class = 0
+
+        loss_total = self.c1 * loss_class + self.c2 * loss_recon + self.c3 * loss_kl
         
-        loss_recon = F.binary_cross_entropy(res, input, reduction='sum')
 
-        D_kl = 0.5 * torch.sum(std**2 + mean**2 - 2*log_std - 1)
+        # Old stuff:
+        # loss_recon = F.binary_cross_entropy(res, input, reduction='sum')
+        # D_kl = 0.5 * torch.sum(std**2 + mean**2 - 2*log_std - 1)
+        # print("loss_recon:", loss_recon)
+        # print("KL:", D_kl)
 
-        print("loss_recon:", loss_recon)
-        print("KL:", D_kl)
-        return pred, loss_recon + D_kl
+        return pred, loss_total
+
+    def histo_forward(self, input, build_histo=True):
+        """
+            Creates histos or samples Qs from it
+            NOTE:
+            Make sure you only put faces into this
+            functions
+        """
+        _, mean, log_std = self.encoder(input)
+
+        # TODO: 
+        # Sample from distributions
+        # Update self.histo accordingly if build_histo = True
+        # else:
+        # return the values from the histograms given the means
+
+        return
+
 
     def sample(self, n_samples, z_samples=[]):
         """
