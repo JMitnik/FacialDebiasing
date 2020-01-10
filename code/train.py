@@ -38,7 +38,7 @@ def eval_epoch(model, data):
 
 def main():
     # import data
-    data = torch.ones((1,64,64))
+    data = torch.ones((1,3,64,64))
 
     # create model
     model = vae_model.Db_vae(z_dim=ARGS.zdim).to(DEVICE)
@@ -62,7 +62,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', default=40, type=int,
                         help='max number of epochs')
-    parser.add_argument('--zdim', default=20, type=int,
+    parser.add_argument('--zdim', default=200, type=int,
                         help='dimensionality of latent space')
     parser.add_argument('--alpha', default=0, type=int,
                         help='importance of debiasing')
