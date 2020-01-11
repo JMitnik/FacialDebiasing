@@ -4,7 +4,7 @@ In this file the training of the network is done
 
 import torch
 import torch.functional as F
-import vae_model
+import vae_model2 as vae_model
 import argparse
 from setup import config
 from torch.utils.data import ConcatDataset, DataLoader
