@@ -3,6 +3,7 @@ In this file the training of the network is done
 """
 
 import torch
+import torch.functional as F
 import vae_model
 import argparse
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -18,10 +19,11 @@ def train_epoch(model, data, optimizer):
     # traindata, _ = data
 
     model.train()
+    avg_loss = 0
 
-    train_error = 100
+    for i, batch in enumerate(data):
 
-    return train_error
+    return avg_loss
 
 def eval_epoch(model, data):
     """
