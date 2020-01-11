@@ -52,8 +52,6 @@ class Encoder(nn.Module):
         """
         
         out = self.layers(input)
-
-        print(out.size())
         
         # return classification, mean and log_std
         return out[:, 0], out[:, 1:self.z_dim+1], torch.exp(out[:,self.z_dim+1:])
@@ -129,7 +127,7 @@ class Db_vae(nn.Module):
 
         self.target_dist = torch.distributions.normal.Normal(0, 1)
 
-        self.c1 = 1
+        self.c1 = 0.000000001
         self.c2 = 1
         self.c3 = 1
 
@@ -143,32 +141,43 @@ class Db_vae(nn.Module):
         # TODO:
         # Acc of the classfication should be added properly - Requires some 
         # extra target input
-        loss_class = F.cross_entropy_loss(pred, labels, reduction='sum')
+        loss_class = F.binary_cross_entropy_with_logits(pred, labels.float(), reduction='sum')
+        slice_indices = labels == 1
 
-        # Slice the face images from the batch
-        face_images = images[labels == 1]
-        face_mean = mean[labels == 1]
-        face_std = std[labels == 1]
-
-        # Get single samples from the distributions with reparametrisation trick
-        dist = torch.distributions.normal.Normal(face_mean, face_std)
-        z = dist.rsample().to(self.device)
-
-        res = self.decoder(z)
-
-        # TODO:
-        # Change losses of VAE part only towards those of the actual faces.
-        # Also shouldnt feed those to the decoder, waste of time
+        if labels[slice_indices].size(0) > 0:
+            # Slice the face images from the batch
+            face_images = images[slice_indices]
+            face_mean = mean[slice_indices]
+            face_std = std[slice_indices]
         
-        # calculate VAE losses
-        loss_recon = F.l1_loss(res, face_images, reduction='sum')
-        loss_kl = F.kl_div(z, self.target_dist, reduction='sum')
+            # Get single samples from the distributions with reparametrisation trick
+            dist = torch.distributions.normal.Normal(face_mean, face_std)
+            z = dist.rsample().to(self.device)
 
-        # calculate total loss
-        loss_total = self.c1 * loss_class + self.c2 * loss_recon + self.c3 * loss_kl
+            res = self.decoder(z)
+
+            # TODO:
+            # Change losses of VAE part only towards those of the actual faces.
+            # Also shouldnt feed those to the decoder, waste of time
+            
+            # calculate VAE losses
+            loss_recon = F.l1_loss(res, face_images, reduction='sum')
+            
+            loss_kl = torch.distributions.kl.kl_divergence(dist, self.target_dist)
+            loss_kl = loss_kl.sum()
+            # print('Model => loss_recon', loss_recon.shape)
+            # print('Model => loss_kl', loss_kl.shape)
+            # print('Model => loss_class', loss_class.shape)
+            # calculate total loss
+            loss_total = self.c1 * loss_class + self.c2 * loss_recon + self.c3 * loss_kl
+
+        else:
+            # OPTIONAL: 
+            # multiply by c3
+            loss_total = loss_class * self.c1
 
         # return predictions and the loss
-        return pred, loss_total
+        return pred, loss_total, loss_class
 
     def histo_forward(self, input, build_histo=True):
         """
