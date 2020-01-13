@@ -92,6 +92,7 @@ def train_epoch(model, data_loader, optimizer):
         images, labels = batch
         batch_size = labels.size(0)
 
+        print("amount of faces:", labels.sum().item())
 
         images = images.to(DEVICE)
         labels = labels.to(DEVICE)
@@ -142,7 +143,8 @@ def eval_epoch(model, data_loader):
 
 def main():
     # import data
-    train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size, train_size=0.8)
+    train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size, 
+                                                                                 train_size=0.8, max_train_images=800, max_valid_images=200)
 
     # create model
     model = vae_model.Db_vae(z_dim=ARGS.zdim, device=DEVICE).to(DEVICE)
