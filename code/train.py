@@ -4,7 +4,7 @@ In this file the training of the network is done
 
 import torch
 import torch.functional as F
-import vae_model2 as vae_model
+import vae_model
 import argparse
 from setup import config
 from torch.utils.data import ConcatDataset, DataLoader
@@ -27,41 +27,9 @@ def calculate_accuracy(labels, pred):
 
     return float(correct_pred.sum().item())/labels.size()[0]
 
-def train_epoch(model, data_loader, optimizer, epoch):
-    """
-    train the model for one epoch
-    """
+def calculate_scores(labels, pred):
+    return
 
-    model.train()
-    avg_loss = 0
-    avg_class_loss = 0
-
-    for i, batch in enumerate(data_loader):
-        images, labels = batch
-        batch_size = labels.size(0)
-
-
-        images = images.to(DEVICE)
-        labels = labels.to(DEVICE)
-
-        pred, loss, class_loss = model.forward(images, labels)
-
-        optimizer.zero_grad()
-        loss = loss/batch_size
-
-        avg_loss += loss.item()
-        avg_class_loss += class_loss/batch_size
-
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5)
-        optimizer.step()
-
-    accuracy = calculate_accuracy(labels, pred)
-    print("Train.py => loss:{}, class_loss:{}, accuracy:{:.2f}".format(avg_loss/i, avg_class_loss/i, accuracy))
-
-    print_reconstruction(model, images, epoch)
-
-    return avg_loss/i
 
 def print_reconstruction(model, images, epoch):
     model.eval()
@@ -72,8 +40,6 @@ def print_reconstruction(model, images, epoch):
     fig=plt.figure(figsize=(16, 8))
 
     recon_images = model.recon_images(images[:n_samples])
-
-
 
     fig.add_subplot(1, 2, 1)
     grid = make_grid(images[:n_samples].reshape(n_samples,3,64,64), n_rows)
@@ -109,22 +75,70 @@ def print_reconstruction(model, images, epoch):
     for tick in frame.axes.get_yticklines():
         tick.set_visible(False)
 
-    plt.savefig('images/training_epoch={}'.format(epoch), bbox_inches='tight')
+    fig.savefig('images/training_epoch={}'.format(epoch), bbox_inches='tight')
+
+    return 
+
+def train_epoch(model, data_loader, optimizer):
+    """
+    train the model for one epoch
+    """
 
     model.train()
+    avg_loss = 0
+    avg_acc = 0
 
-def eval_epoch(model, data):
+    for i, batch in enumerate(data_loader):
+        images, labels = batch
+        batch_size = labels.size(0)
+
+
+        images = images.to(DEVICE)
+        labels = labels.to(DEVICE)
+
+        pred, loss = model.forward(images, labels)
+
+        optimizer.zero_grad()
+        loss = loss/batch_size
+
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5)
+        optimizer.step()
+
+        acc = calculate_accuracy(labels, pred)
+
+        avg_loss += loss.item()
+        avg_acc += acc
+
+    return avg_loss/(i+1), avg_acc/(i+1)
+
+def eval_epoch(model, data_loader):
     """
     Calculates the validation error of the model
     """
 
-    # _, valdata = data
-
     model.eval()
+    
+    avg_loss = 0
+    avg_acc = 0
 
-    val_error = 200
+    for i, batch in enumerate(data_loader):
+        images, labels = batch
+        batch_size = labels.size(0)
 
-    return val_error
+        images = images.to(DEVICE)
+        labels = labels.to(DEVICE)
+
+        pred, loss = model.forward(images, labels)
+
+        loss = loss/batch_size
+        acc = calculate_accuracy(labels, pred)
+
+        avg_loss += loss
+        avg_acc += acc
+
+    model.train()
+    return avg_loss/(i+1), avg_acc/(i+1)
 
 def main():
     # import data
@@ -138,11 +152,11 @@ def main():
 
     for epoch in range(ARGS.epochs):
         print("Starting epoch:{}/{}".format(epoch, ARGS.epochs))
-        train_error = train_epoch(model, train_loader, optimizer, epoch)
-        val_error = eval_epoch(model, valid_loader)
+        train_error, train_acc = train_epoch(model, train_loader, optimizer)
+        val_error, val_acc = eval_epoch(model, valid_loader)
 
-        # print("epoch {}/{}, train_error={}, validation_error={}".format(epoch,
-                                    # ARGS.epochs, train_error, val_error))
+        print("epoch {}/{}, train_error={:.2f}, train_acc={:.2f}, val_error={:.2f}, val_acc={:.2f}".format(epoch, 
+                                    ARGS.epochs, train_error, train_acc, val_error, val_acc))
 
     return
 
@@ -156,8 +170,10 @@ if __name__ == "__main__":
                         help='max number of epochs')
     parser.add_argument('--zdim', default=200, type=int,
                         help='dimensionality of latent space')
-    parser.add_argument('--alpha', default=0, type=int,
+    parser.add_argument('--alpha', default=0.0, type=float,
                         help='importance of debiasing')
+    parser.add_argument('--dataset_size', default=10000, type=int,
+                        help='total size of database')
 
     ARGS = parser.parse_args()
 
