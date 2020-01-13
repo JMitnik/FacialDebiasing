@@ -127,7 +127,7 @@ class Db_vae(nn.Module):
 
         self.target_dist = torch.distributions.normal.Normal(0, 1)
 
-        self.c1 = 1000
+        self.c1 = 100
         self.c2 = 1
         self.c3 = 1
 
