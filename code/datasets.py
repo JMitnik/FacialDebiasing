@@ -81,6 +81,7 @@ def split_dataset(dataset, train_size: float, max_images: Optional[int] = None):
 
         valid_idxs = np.random.permutation(np.arange(0, len(valid_data)))[:max_images]
         valid_data = Subset(valid_data, valid_idxs)
+
     return train_data, valid_data
 
 def train_and_valid_loaders(
@@ -107,3 +108,9 @@ def train_and_valid_loaders(
     valid_loader: DataLoader = DataLoader(dataset_valid, batch_size=batch_size, shuffle=shuffle)
 
     return train_loader, valid_loader, dataset_train, dataset_valid
+
+def sample_dataset(dataset: Dataset, nr_samples: int):
+    max_nr_items: int = min(nr_samples, len(dataset))
+    idxs = np.random.permutation(np.arange(len(dataset)))[:max_nr_items]
+
+    return [dataset[idx] for idx in idxs]
