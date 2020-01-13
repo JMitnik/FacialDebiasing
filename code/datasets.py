@@ -1,3 +1,4 @@
+import torch
 from torch.utils.data import Dataset as TorchDataset, ConcatDataset, DataLoader, random_split, Dataset, RandomSampler
 from torch.utils.data.dataset import Subset
 import torchvision.transforms as transforms
@@ -113,4 +114,5 @@ def sample_dataset(dataset: Dataset, nr_samples: int):
     max_nr_items: int = min(nr_samples, len(dataset))
     idxs = np.random.permutation(np.arange(len(dataset)))[:max_nr_items]
 
-    return [dataset[idx] for idx in idxs]
+    return torch.stack([dataset[idx][0] for idx in idxs])
+
