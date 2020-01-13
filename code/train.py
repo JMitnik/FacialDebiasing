@@ -8,7 +8,7 @@ import vae_model2 as vae_model
 import argparse
 from setup import config
 from torch.utils.data import ConcatDataset, DataLoader
-from dataset import train_and_valid_loaders
+from datasets import train_and_valid_loaders
 
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
@@ -55,7 +55,7 @@ def train_epoch(model, data_loader, optimizer, epoch):
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5)
         optimizer.step()
-    
+
     accuracy = calculate_accuracy(labels, pred)
     print("Train.py => loss:{}, class_loss:{}, accuracy:{:.2f}".format(avg_loss/i, avg_class_loss/i, accuracy))
 
@@ -73,7 +73,7 @@ def print_reconstruction(model, images, epoch):
 
     recon_images = model.recon_images(images[:n_samples])
 
-    
+
 
     fig.add_subplot(1, 2, 1)
     grid = make_grid(images[:n_samples].reshape(n_samples,3,64,64), n_rows)
@@ -95,7 +95,7 @@ def print_reconstruction(model, images, epoch):
     fig.add_subplot(1, 2, 2)
     grid = make_grid(recon_images.reshape(n_samples,3,64,64), n_rows)
     plt.imshow(grid.permute(1,2,0).cpu())
-    
+
     ########## REMOVE FRAME ##########
     frame = plt.gca()
     for xlabel_i in frame.axes.get_xticklabels():
@@ -121,14 +121,14 @@ def eval_epoch(model, data):
     # _, valdata = data
 
     model.eval()
-    
+
     val_error = 200
 
     return val_error
 
 def main():
     # import data
-    train_loader, valid_loader = train_and_valid_loaders(batch_size=ARGS.batch_size, train_size=0.8)
+    train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size, train_size=0.8)
 
     # create model
     model = vae_model.Db_vae(z_dim=ARGS.zdim, device=DEVICE).to(DEVICE)
@@ -141,10 +141,10 @@ def main():
         train_error = train_epoch(model, train_loader, optimizer, epoch)
         val_error = eval_epoch(model, valid_loader)
 
-        # print("epoch {}/{}, train_error={}, validation_error={}".format(epoch, 
+        # print("epoch {}/{}, train_error={}, validation_error={}".format(epoch,
                                     # ARGS.epochs, train_error, val_error))
 
-    return 
+    return
 
 if __name__ == "__main__":
     print("start training")
