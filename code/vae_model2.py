@@ -24,24 +24,24 @@ class Encoder(nn.Module):
 
         self.layers = nn.Sequential(   
             nn.Conv2d(3, 64, kernel_size=5, stride=2),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.BatchNorm2d(64),
 
             nn.Conv2d(64, 128, kernel_size=5, stride=2),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.BatchNorm2d(128),
 
             nn.Conv2d(128, 256, kernel_size=5, stride=2),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.BatchNorm2d(256),
 
             nn.Conv2d(256, 512, kernel_size=5, stride=2),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.BatchNorm2d(512),
             nn.Flatten(),
 
             nn.Linear(512, 1000),
-            nn.ReLU(),
+            nn.LeakyReLU(),
 
             nn.Linear(1000, z_dim*2+1)
         )
@@ -81,20 +81,20 @@ class Decoder(nn.Module):
 
         self.layers = nn.Sequential(
             nn.Linear(z_dim, 1000),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Linear(1000, 512*1*1),
             UnFlatten(512, 1),
 
             nn.ConvTranspose2d(512, 256, kernel_size=5, stride=2),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.BatchNorm2d(256),
 
             nn.ConvTranspose2d(256, 128, kernel_size=5, stride=2),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.BatchNorm2d(128),
 
             nn.ConvTranspose2d(128, 64, kernel_size=5, stride=2, output_padding=1),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.BatchNorm2d(64),
 
             nn.ConvTranspose2d(64, 3, kernel_size=5, stride=2, output_padding=1),

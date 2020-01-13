@@ -14,7 +14,7 @@ from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-DEVICE = 'cpu'
+# DEVICE = 'cpu'
 print("device:", DEVICE)
 ARGS = None
 
@@ -33,16 +33,20 @@ def train_epoch(model, data_loader, optimizer, epoch):
         images, labels = batch
         batch_size = labels.size(0)
 
+
+        images = images.to(DEVICE)
+        labels = labels.to(DEVICE)
+
         pred, loss, class_loss = model.forward(images, labels)
 
         optimizer.zero_grad()
         loss = loss/batch_size
 
-        avg_loss += loss
+        avg_loss += loss.item()
         avg_class_loss += class_loss/batch_size
 
         loss.backward()
-
+        torch.nn.utils.clip_grad_norm(model.parameters(), max_norm=5)
         optimizer.step()
     
     print("Train.py => loss:{}, class_loss:{}".format(avg_loss/i, avg_class_loss/i))
@@ -106,7 +110,7 @@ def main():
     train_loader, valid_loader = train_and_valid_loaders(batch_size=ARGS.batch_size, train_size=0.8)
 
     # create model
-    model = vae_model.Db_vae(z_dim=ARGS.zdim).to(DEVICE)
+    model = vae_model.Db_vae(z_dim=ARGS.zdim, device=DEVICE).to(DEVICE)
 
     # create optimizer
     optimizer = torch.optim.Adam(model.parameters())
