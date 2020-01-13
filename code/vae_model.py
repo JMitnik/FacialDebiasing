@@ -5,6 +5,7 @@ Here the structure of the network is made in pytorch
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 
 
 class Encoder(nn.Module):
@@ -46,6 +47,7 @@ class Encoder(nn.Module):
             nn.Linear(1000, z_dim*2+1)
         )
 
+
     def forward(self, input):
         """
         Perform forward pass of encoder.
@@ -54,7 +56,7 @@ class Encoder(nn.Module):
         out = self.layers(input)
         
         # return classification, mean and log_std
-        return out[:, 0], out[:, 1:self.z_dim+1], torch.exp(out[:,self.z_dim+1:])
+        return out[:, 0], out[:, 1:self.z_dim+1], F.softplus(out[:,self.z_dim+1:])
 
 
 class UnFlatten(nn.Module):
@@ -127,7 +129,7 @@ class Db_vae(nn.Module):
 
         self.target_dist = torch.distributions.normal.Normal(0, 1)
 
-        self.c1 = 100
+        self.c1 = 10
         self.c2 = 1
         self.c3 = 1
 
@@ -137,13 +139,12 @@ class Db_vae(nn.Module):
         negative average elbo for the given batch.
         """
         pred, mean, std = self.encoder(images)
-
         # TODO:
         # Acc of the classfication should be added properly - Requires some 
         # extra target input
+
         loss_class = F.binary_cross_entropy_with_logits(pred, labels.float(), reduction='sum')
 
-        # loss_class = 0
         slice_indices = labels == 1
 
         if labels[slice_indices].size(0) > 0:
@@ -175,10 +176,9 @@ class Db_vae(nn.Module):
 
         else:
             # OPTIONAL: 
-            # multiply by c3
+            # multiply by c1
             loss_total = loss_class * self.c1
 
-        # return predictions and the loss
         return pred, loss_total
 
     def histo_forward(self, input, build_histo=True):
