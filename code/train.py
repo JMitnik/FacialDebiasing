@@ -10,12 +10,15 @@ from setup import config
 from torch.utils.data import ConcatDataset, DataLoader
 from dataset import train_and_valid_loaders
 
+from torchvision.utils import make_grid
+import matplotlib.pyplot as plt
+
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 DEVICE = 'cpu'
 print("device:", DEVICE)
 ARGS = None
 
-def train_epoch(model, data_loader, optimizer):
+def train_epoch(model, data_loader, optimizer, epoch):
     """
     train the model for one epoch
     """
@@ -44,7 +47,46 @@ def train_epoch(model, data_loader, optimizer):
     
     print("Train.py => loss:{}, class_loss:{}".format(avg_loss/i, avg_class_loss/i))
 
+    print_reconstruction(model, images, epoch)
+
     return avg_loss/i
+
+def print_reconstruction(model, images, epoch):
+    model.eval()
+    ######### RECON IMAGES ###########
+    n_rows = 4
+    n_samples = n_rows**2
+
+    fig=plt.figure(figsize=(16, 8))
+
+    recon_images = model.recon_images(images[:n_samples])
+
+    
+
+    fig.add_subplot(1, 2, 1)
+    grid = make_grid(images[:n_samples].reshape(n_samples,3,64,64), n_rows)
+    plt.imshow(grid.permute(1,2,0).cpu())
+
+    fig.add_subplot(1, 2, 2)
+    grid = make_grid(recon_images.reshape(n_samples,3,64,64), n_rows)
+    plt.imshow(grid.permute(1,2,0).cpu())
+    
+
+    frame = plt.gca()
+    for xlabel_i in frame.axes.get_xticklabels():
+        xlabel_i.set_visible(False)
+        xlabel_i.set_fontsize(0.0)
+    for xlabel_i in frame.axes.get_yticklabels():
+        xlabel_i.set_fontsize(0.0)
+        xlabel_i.set_visible(False)
+    for tick in frame.axes.get_xticklines():
+        tick.set_visible(False)
+    for tick in frame.axes.get_yticklines():
+        tick.set_visible(False)
+
+    plt.savefig('images/training_epoch={}'.format(epoch), bbox_inches='tight')
+
+    model.train()
 
 def eval_epoch(model, data):
     """
@@ -71,7 +113,7 @@ def main():
 
     for epoch in range(ARGS.epochs):
         print("Starting epoch:{}/{}".format(epoch, ARGS.epochs))
-        train_error = train_epoch(model, train_loader, optimizer)
+        train_error = train_epoch(model, train_loader, optimizer, epoch)
         val_error = eval_epoch(model, valid_loader)
 
         # print("epoch {}/{}, train_error={}, validation_error={}".format(epoch, 

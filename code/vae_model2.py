@@ -196,6 +196,18 @@ class Db_vae(nn.Module):
 
         return
 
+    def recon_images(self, images):
+        with torch.no_grad():
+            pred, mean, std = self.encoder(images)
+            
+            # Get single samples from the distributions with reparametrisation trick
+            dist = torch.distributions.normal.Normal(mean, std)
+            z = dist.rsample().to(self.device)
+
+            recon_images = self.decoder(z)
+
+        # return predictions and the loss
+        return recon_images
 
     def sample(self, n_samples, z_samples=[]):
         """
