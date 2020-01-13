@@ -18,12 +18,19 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print("device:", DEVICE)
 ARGS = None
 
+def calculate_accuracy(labels, pred):
+    pred[pred > 0] = 1
+    pred[pred <= 0] = 0
+    pred = pred.long()
+
+    correct_pred = labels == pred
+
+    return float(correct_pred.sum().item())/labels.size()[0]
+
 def train_epoch(model, data_loader, optimizer, epoch):
     """
     train the model for one epoch
     """
-
-    # traindata, _ = data
 
     model.train()
     avg_loss = 0
@@ -46,10 +53,11 @@ def train_epoch(model, data_loader, optimizer, epoch):
         avg_class_loss += class_loss/batch_size
 
         loss.backward()
-        torch.nn.utils.clip_grad_norm(model.parameters(), max_norm=5)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5)
         optimizer.step()
     
-    print("Train.py => loss:{}, class_loss:{}".format(avg_loss/i, avg_class_loss/i))
+    accuracy = calculate_accuracy(labels, pred)
+    print("Train.py => loss:{}, class_loss:{}, accuracy:{:.2f}".format(avg_loss/i, avg_class_loss/i, accuracy))
 
     print_reconstruction(model, images, epoch)
 
@@ -71,11 +79,24 @@ def print_reconstruction(model, images, epoch):
     grid = make_grid(images[:n_samples].reshape(n_samples,3,64,64), n_rows)
     plt.imshow(grid.permute(1,2,0).cpu())
 
+    ########## REMOVE FRAME ##########
+    frame = plt.gca()
+    for xlabel_i in frame.axes.get_xticklabels():
+        xlabel_i.set_visible(False)
+        xlabel_i.set_fontsize(0.0)
+    for xlabel_i in frame.axes.get_yticklabels():
+        xlabel_i.set_fontsize(0.0)
+        xlabel_i.set_visible(False)
+    for tick in frame.axes.get_xticklines():
+        tick.set_visible(False)
+    for tick in frame.axes.get_yticklines():
+        tick.set_visible(False)
+
     fig.add_subplot(1, 2, 2)
     grid = make_grid(recon_images.reshape(n_samples,3,64,64), n_rows)
     plt.imshow(grid.permute(1,2,0).cpu())
     
-
+    ########## REMOVE FRAME ##########
     frame = plt.gca()
     for xlabel_i in frame.axes.get_xticklabels():
         xlabel_i.set_visible(False)
