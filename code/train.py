@@ -8,7 +8,7 @@ import vae_model
 import argparse
 from setup import config
 from torch.utils.data import ConcatDataset, DataLoader
-from dataset import train_and_valid_loaders
+from datasets import train_and_valid_loaders
 
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
@@ -61,7 +61,7 @@ def print_reconstruction(model, images, epoch):
     fig.add_subplot(1, 2, 2)
     grid = make_grid(recon_images.reshape(n_samples,3,64,64), n_rows)
     plt.imshow(grid.permute(1,2,0).cpu())
-    
+
     ########## REMOVE FRAME ##########
     frame = plt.gca()
     for xlabel_i in frame.axes.get_xticklabels():
@@ -142,7 +142,7 @@ def eval_epoch(model, data_loader):
 
 def main():
     # import data
-    train_loader, valid_loader = train_and_valid_loaders(batch_size=ARGS.batch_size, train_size=0.8)
+    train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size, train_size=0.8)
 
     # create model
     model = vae_model.Db_vae(z_dim=ARGS.zdim, device=DEVICE).to(DEVICE)
@@ -158,7 +158,7 @@ def main():
         print("epoch {}/{}, train_error={:.2f}, train_acc={:.2f}, val_error={:.2f}, val_acc={:.2f}".format(epoch, 
                                     ARGS.epochs, train_error, train_acc, val_error, val_acc))
 
-    return 
+    return
 
 if __name__ == "__main__":
     print("start training")
