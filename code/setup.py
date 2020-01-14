@@ -7,5 +7,7 @@ class Config(NamedTuple):
     path_to_celeba_bbox_file: str = 'data/celeba/list_bbox_celeba.txt'
     # Path to ImageNet images
     path_to_imagenet_images: str = 'data/imagenet'
+    # Random seed for reproducability
+    random_seed: int = 0
 
 config = Config()
