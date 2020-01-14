@@ -10,7 +10,7 @@ import vae_model
 import argparse
 from setup import config
 from torch.utils.data import ConcatDataset, DataLoader
-from datasets import train_and_valid_loaders, sample_dataset
+from datasets import train_and_valid_loaders, sample_dataset, sample_idxs_from_sub_dataset
 
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
@@ -130,7 +130,7 @@ def print_reconstruction(model, data, epoch):
     fig.savefig('images/reconstructions/epoch={}'.format(epoch), bbox_inches='tight')
 
     plt.close()
-    return 
+    return
 
 def train_epoch(model, data_loader, optimizer):
     """
@@ -162,7 +162,6 @@ def train_epoch(model, data_loader, optimizer):
         optimizer.step()
 
         acc = calculate_accuracy(labels, pred)
-
         avg_loss += loss.item()
         avg_acc += acc
 
@@ -170,7 +169,7 @@ def train_epoch(model, data_loader, optimizer):
 
         if i % ARGS.eval_freq == 0:
             print("batch:{} accuracy:{}".format(i, acc))
-            
+
     # debug_memory()
 
     return avg_loss/(i+1), avg_acc/(i+1)
@@ -181,7 +180,6 @@ def eval_epoch(model, data_loader, epoch):
     """
 
     model.eval()
-    
     avg_loss = 0
     avg_acc = 0
 
@@ -218,7 +216,7 @@ def eval_epoch(model, data_loader, epoch):
 
 def main():
     # import data
-    train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size, 
+    train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size,
                                                                                  train_size=0.8, max_images=ARGS.dataset_size)
 
     # train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size, 
@@ -232,11 +230,11 @@ def main():
 
     for epoch in range(ARGS.epochs):
         print("Starting epoch:{}/{}".format(epoch, ARGS.epochs))
-        train_error, train_acc = train_epoch(model, train_loader, optimizer)
+        # train_error, train_acc = train_epoch(model, train_loader, optimizer)
         print("training done")
         val_error, val_acc = eval_epoch(model, valid_loader, epoch)
 
-        print("epoch {}/{}, train_error={:.2f}, train_acc={:.2f}, val_error={:.2f}, val_acc={:.2f}".format(epoch, 
+        print("epoch {}/{}, train_error={:.2f}, train_acc={:.2f}, val_error={:.2f}, val_acc={:.2f}".format(epoch,
                                     ARGS.epochs, train_error, train_acc, val_error, val_acc))
 
         print_reconstruction(model, valid_data, epoch)
@@ -258,7 +256,7 @@ if __name__ == "__main__":
                         help='total size of database')
     parser.add_argument('--eval_freq', default=5, type=int,
                         help='total size of database')
-    
+
 
     ARGS = parser.parse_args()
 

@@ -1,5 +1,5 @@
 from load import sample_train_dataset
-from datasets import sample_dataset, train_and_valid_loaders
+from datasets import sample_dataset, train_and_valid_loaders, sample_idxs_from_sub_dataset
 import unittest
 import numpy as np
 from collections import Counter
@@ -64,6 +64,11 @@ class DatasetTest(unittest.TestCase):
 
         self.assertEqual(items.shape[0], 10)
 
+    def sample_idxs_from_valid_dataset(self):
+        sample_train_loader, sample_valid_loader, sample_train_dataset, sample_valid_dataset = train_and_valid_loaders(1, max_images=100)
+        subsample = sample_idxs_from_sub_dataset([100, 200, 700], sample_valid_loader, 1)
+
+        return subsample
 
 if __name__ == '__main__':
     unittest.main()
