@@ -18,6 +18,12 @@ import matplotlib.pyplot as plt
 import gc
 from collections import Counter
 
+import os
+if not os.path.exists('images/best_and_worst'):
+    os.makedirs('images/best_and_worst')
+if not os.path.exists('images/reconstructions'):
+    os.makedirs('images/reconstructions')
+
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # DEVICE = 'cpu'
