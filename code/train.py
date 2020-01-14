@@ -213,11 +213,11 @@ def eval_epoch(model, data_loader, epoch):
 
 def main():
     # import data
-    train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size,
-                                                                                 train_size=0.8, max_images=ARGS.dataset_size)
+    # train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size,
+    #                                                                              train_size=0.8, max_images=ARGS.dataset_size)
 
-    # train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size, 
-    #                                                                              train_size=0.8)
+    train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size, 
+                                                                                 train_size=0.8)
 
     # create model
     model = vae_model.Db_vae(z_dim=ARGS.zdim, device=DEVICE).to(DEVICE)
