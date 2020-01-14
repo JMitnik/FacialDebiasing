@@ -10,7 +10,7 @@ import vae_model
 import argparse
 from setup import config
 from torch.utils.data import ConcatDataset, DataLoader
-from datasets import train_and_valid_loaders, sample_dataset, sample_idxs_from_sub_dataset
+from datasets import train_and_valid_loaders, sample_dataset, sample_idxs_from_loader
 
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
@@ -67,7 +67,10 @@ def get_best_and_worst(labels, pred):
 
     return best_faces, worst_faces, best_other, worst_other
 
-def visualize_best_and_worst(data, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other):
+def visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other):
+    n_rows = 4
+    n_samples = n_rows**2
+    
     fig=plt.figure(figsize=(16, 16))
 
     sub_titles = ["Best faces", "Worst faces", "Best non-faces", "Worst non-faces"]
@@ -75,10 +78,7 @@ def visualize_best_and_worst(data, all_labels, all_indeces, epoch, best_faces, w
         labels = all_labels[indeces]
         indeces = all_indeces[indeces]
 
-        print(indeces)
-        print(labels)
-
-        images = data.get_images(indeces, labels[0])
+        images = sample_idxs_from_loader(indeces, data_loader, labels[0])
 
         ax = fig.add_subplot(2, 2, i+1)
         grid = make_grid(images.reshape(n_samples,3,64,64), n_rows)
@@ -208,10 +208,10 @@ def eval_epoch(model, data_loader, epoch):
             all_preds = torch.cat((all_preds, pred))
             all_indeces = torch.cat((all_indeces, index))
 
+    print("length of all eval:", len(all_labels))
     best_faces, worst_faces, best_other, worst_other = get_best_and_worst(all_labels, all_preds)
 
-    data = []
-    visualize_best_and_worst(data, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other)
+    visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other)
     return avg_loss/(i+1), avg_acc/(i+1)
 
 def main():
@@ -230,7 +230,7 @@ def main():
 
     for epoch in range(ARGS.epochs):
         print("Starting epoch:{}/{}".format(epoch, ARGS.epochs))
-        # train_error, train_acc = train_epoch(model, train_loader, optimizer)
+        train_error, train_acc = train_epoch(model, train_loader, optimizer)
         print("training done")
         val_error, val_acc = eval_epoch(model, valid_loader, epoch)
 
