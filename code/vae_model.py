@@ -125,13 +125,20 @@ class Db_vae(nn.Module):
         self.encoder = Encoder(z_dim)
         self.decoder = Decoder(z_dim)
 
-        self.histo = torch.zeros((z_dim, hist_size))
-
         self.target_dist = torch.distributions.normal.Normal(0, 1)
 
         self.c1 = 1
         self.c2 = 1
         self.c3 = 1
+
+        self.num_bins = 1000
+        self.min_val = -15
+        self.max_val = 15
+        self.hist = torch.ones((z_dim, self.num_bins))
+        self.means = torch.Tensor().to(self.device)
+        
+        self.alpha = 0.01
+
 
     def forward(self, images, labels):
         """
@@ -181,22 +188,52 @@ class Db_vae(nn.Module):
 
         return pred, loss_total
 
-    def histo_forward(self, input, build_histo=True):
+    def build_histo(self, input):
         """
             Creates histos or samples Qs from it
             NOTE:
             Make sure you only put faces into this
             functions
         """
-        _, mean, log_std = self.encoder(input)
-        
-        # TODO: 
-        # Sample from distributions
-        # Update self.histo accordingly if build_histo = True
-        # else:
-        # return the values from the histograms given the means
 
+        samples_per_dist = 10000
+        
+        _, mean, log_std = self.encoder(input)
+
+        self.means = torch.cat((self.means, mean))
+
+        dist = torch.distributions.normal.Normal(mean, log_std)
+        z = dist.rsample((samples_per_dist,)).to(self.device)
+        # NOTE those samples are added to the first axis!
+
+        self.hist += torch.stack([torch.histc(z[:, :, i], 
+                                  min=self.min_mu, 
+                                  max=self.max_mu, 
+                                  bins=self.num_bins) for i in range(self.z_dim)])
+        
         return
+
+    def get_histo(self):
+        """
+            Returns the probabilities given the means given the histo values
+        """
+
+        print(self.means.shape)
+        weights = torch.Tensor().to(DEVICE)
+        for mu in self.means:
+            # Gets probability for each 
+            newhist = torch.stack([torch.histc(i, 
+                                  min=self.min_mu, 
+                                  max=self.max_mu, 
+                                  bins=self.num_bins) for i in mu])
+            newhist *= self.hist
+            newhist = newhist.sum(dim=1)
+            weights = torch.cat((weights, ((1 / (newhist + self.alpha)).prod())))
+            
+        # Reset values
+        self.hist = torch.ones((self.z_dim, self.num_bins))
+        self.means = torch.Tensor().to(self.device)
+        return weights
 
     def recon_images(self, images):
         with torch.no_grad():

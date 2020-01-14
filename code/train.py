@@ -5,6 +5,7 @@ In this file the training of the network is done
 import torch
 import torch.functional as F
 import numpy as np
+import datetime
 
 import vae_model
 import argparse
@@ -17,15 +18,16 @@ import matplotlib.pyplot as plt
 
 import gc
 from collections import Counter
-
 import os
-if not os.path.exists('images/best_and_worst'):
-    os.makedirs('images/best_and_worst')
-if not os.path.exists('images/reconstructions'):
-    os.makedirs('images/reconstructions')
+
+FOLDER_NAME = "images_{}".format(datetime.datetime.now())
+os.makedirs("images/"+ FOLDER_NAME + '/best_and_worst')
+os.makedirs("images/"+ FOLDER_NAME + '/reconstructions')
 
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+
 # DEVICE = 'cpu'
 print("device:", DEVICE)
 ARGS = None
@@ -94,7 +96,7 @@ def visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_f
         remove_frame(plt)
 
 
-    fig.savefig('images/best_and_worst/epoch:{}'.format(epoch), bbox_inches='tight')
+    fig.savefig('images/{}/best_and_worst/epoch:{}'.format(FOLDER_NAME,epoch), bbox_inches='tight')
 
     plt.close()
     
@@ -133,7 +135,7 @@ def print_reconstruction(model, data, epoch):
 
     remove_frame(plt)
 
-    fig.savefig('images/reconstructions/epoch={}'.format(epoch), bbox_inches='tight')
+    fig.savefig('images/{}/reconstructions/epoch={}'.format(FOLDER_NAME, epoch), bbox_inches='tight')
 
     plt.close()
     return
@@ -146,6 +148,7 @@ def train_epoch(model, data_loader, optimizer):
     model.train()
     avg_loss = 0
     avg_acc = 0
+
 
     for i, batch in enumerate(data_loader):
         images, labels, index = batch
@@ -219,11 +222,11 @@ def eval_epoch(model, data_loader, epoch):
 
 def main():
     # import data
-    # train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size,
-    #                                                                              train_size=0.8, max_images=ARGS.dataset_size)
+    train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size,
+                                                                                 train_size=0.8, max_images=ARGS.dataset_size)
 
-    train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size, 
-                                                                                 train_size=0.8)
+    # train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size, 
+    #                                                                              train_size=0.8)
 
     # create model
     model = vae_model.Db_vae(z_dim=ARGS.zdim, device=DEVICE).to(DEVICE)
