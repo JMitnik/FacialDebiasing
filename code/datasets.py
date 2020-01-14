@@ -41,7 +41,7 @@ class CelebDataset(TorchDataset):
         img: Image = Image.open(os.path.join(self.path_to_images,
                                       self.df_images.iloc[idx].image_id))
 
-        img: Image = self.transform(img)
+        img = self.transform(img)
         label: int = DataLabel.POSITIVE.value
 
         return img, label
@@ -71,38 +71,57 @@ class ImagenetDataset(ImageFolder):
         return [self.__getitem__(idx) for idx in idxs]
 
 def split_dataset(dataset, train_size: float, max_images: Optional[int] = None):
-    nr_train: int = int(np.floor(train_size * len(dataset)))
-    nr_valid: int = len(dataset) - nr_train
+    # TODO: Test
+    # Shuffle indices of the dataset
+    idxs: np.array = np.arange(len(dataset))
+    np.random.seed(config.random_seed)
+    np.random.shuffle(idxs)
 
-    train_data, valid_data = random_split(dataset, [nr_train, nr_valid])
+    # Sample sub-selection
+    sampled_idxs: np.array = idxs if not max_images else idxs[:min(max_images, len(idxs))]
 
-    if max_images:
-        train_idxs = np.random.permutation(np.arange(0, len(train_data)))[:max_images]
-        train_data = Subset(train_data, train_idxs)
+    # Split dataset
+    split: int = int(np.floor(train_size * len(sampled_idxs)))
+    train_idxs = sampled_idxs[:split]
+    valid_idxs = sampled_idxs[split:]
 
-        valid_idxs = np.random.permutation(np.arange(0, len(valid_data)))[:max_images]
-        valid_data = Subset(valid_data, valid_idxs)
+    # Subsample dataset with given validation indices
+    train_data = Subset(dataset, train_idxs)
+    valid_data = Subset(dataset, valid_idxs)
 
     return train_data, valid_data
+
+def concat_datasets(dataset_a, dataset_b, proportion_a):
+    proportion_b: float = 1 - proportion_a
+
+    # Calculate amount of dataset
+    nr_dataset_a: int = int(np.floor(proportion_a * len(dataset_a)))
+    nr_dataset_b: int = int(np.floor(proportion_b * len(dataset_b)))
+
+    # Subsample the datasets
+    sampled_dataset_a = Subset(dataset_a, np.arange(nr_dataset_a))
+    sampled_dataset_b = Subset(dataset_b, np.arange(nr_dataset_b))
+
+    return ConcatDataset([sampled_dataset_a, sampled_dataset_b])
 
 def train_and_valid_loaders(
     batch_size: int,
     shuffle: bool = True,
     train_size: float = 0.8,
+    proportion_faces: float = 0.5,
     max_images: Optional[int] = None,
-    amount_faces: float = 0.5,
 ):
-    # Create and concatenate multiple sources of data
+    # Create the datasets
     imagenet_dataset: Dataset = ImagenetDataset(config.path_to_imagenet_images)
     celeb_dataset: Dataset = CelebDataset(config.path_to_celeba_images, config.path_to_celeba_bbox_file)
 
-    # Split into train and valid datasets
+    # Split both datasets into training and validation
     celeb_train, celeb_valid = split_dataset(celeb_dataset, train_size, max_images)
     imagenet_train, imagenet_valid = split_dataset(imagenet_dataset, train_size, max_images)
 
-    # Concat the sources of data
-    dataset_train: Dataset = ConcatDataset([imagenet_train, celeb_train])
-    dataset_valid: Dataset = ConcatDataset([imagenet_valid, celeb_valid])
+    # Concat the sources of data by their proportions
+    dataset_train: Dataset = concat_datasets(celeb_train, imagenet_train, proportion_faces)
+    dataset_valid: Dataset = concat_datasets(celeb_valid, imagenet_valid, proportion_faces)
 
     # Define the loaders
     train_loader: DataLoader = DataLoader(dataset_train, batch_size=batch_size, shuffle=shuffle)
