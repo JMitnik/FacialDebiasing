@@ -40,11 +40,12 @@ def remove_frame(plt):
     for tick in frame.axes.get_yticklines():
         tick.set_visible(False)
 
-def print_best_and_worst(images, labels, pred, epoch):
+def get_best_and_worst(labels, pred):
     n_rows = 4
     n_samples = n_rows**2
 
     labels = labels.float().cpu()
+    print("face procentage:", float(labels.sum().item())/len(labels))
 
     pred = pred.cpu()
 
@@ -59,17 +60,28 @@ def print_best_and_worst(images, labels, pred, epoch):
     other_min[labels == 1] = -np.inf
 
     worst_faces = faces_max.argsort()[:n_samples]
-    best_faces = faces_min.argsort()[-n_samples:].numpy()
+    best_faces = faces_min.argsort(descending=True)[:n_samples]
 
-    worst_other = other_min.argsort()[-n_samples:].numpy()
+    worst_other = other_min.argsort(descending=True)[:n_samples]
     best_other = other_max.argsort()[:n_samples]
 
+    return best_faces, worst_faces, best_other, worst_other
+
+def visualize_best_and_worst(data, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other):
     fig=plt.figure(figsize=(16, 16))
 
     sub_titles = ["Best faces", "Worst faces", "Best non-faces", "Worst non-faces"]
     for i, indeces in enumerate([best_faces, worst_faces, best_other, worst_other]):
+        labels = all_labels[indeces]
+        indeces = all_indeces[indeces]
+
+        print(indeces)
+        print(labels)
+
+        images = data.get_images(indeces, labels[0])
+
         ax = fig.add_subplot(2, 2, i+1)
-        grid = make_grid(images[indeces].reshape(n_samples,3,64,64), n_rows)
+        grid = make_grid(images.reshape(n_samples,3,64,64), n_rows)
         plt.imshow(grid.permute(1,2,0).cpu())
         ax.set_title(sub_titles[i], fontdict={"fontsize":30})
 
@@ -154,6 +166,8 @@ def train_epoch(model, data_loader, optimizer):
         avg_loss += loss.item()
         avg_acc += acc
 
+        # print_best_and_worst(images, labels, pred, 123)
+
         if i % ARGS.eval_freq == 0:
             print("batch:{} accuracy:{}".format(i, acc))
             
@@ -171,6 +185,10 @@ def eval_epoch(model, data_loader, epoch):
     avg_loss = 0
     avg_acc = 0
 
+    all_labels = torch.LongTensor([]).to(DEVICE)
+    all_preds = torch.Tensor([]).to(DEVICE)
+    all_indeces = torch.LongTensor([]).to(DEVICE)
+
     with torch.no_grad():
         for i, batch in enumerate(data_loader):
             images, labels, index = batch
@@ -178,6 +196,7 @@ def eval_epoch(model, data_loader, epoch):
 
             images = images.to(DEVICE)
             labels = labels.to(DEVICE)
+            index = index.to(DEVICE)
 
             pred, loss = model.forward(images, labels)
 
@@ -187,13 +206,23 @@ def eval_epoch(model, data_loader, epoch):
             avg_loss += loss.item()
             avg_acc += acc
 
-    print_best_and_worst(images, labels, pred, epoch)
+            all_labels = torch.cat((all_labels, labels))
+            all_preds = torch.cat((all_preds, pred))
+            all_indeces = torch.cat((all_indeces, index))
+
+    best_faces, worst_faces, best_other, worst_other = get_best_and_worst(all_labels, all_preds)
+
+    data = []
+    visualize_best_and_worst(data, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other)
     return avg_loss/(i+1), avg_acc/(i+1)
 
 def main():
     # import data
     train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size, 
                                                                                  train_size=0.8, max_images=ARGS.dataset_size)
+
+    # train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size, 
+    #                                                                              train_size=0.8)
 
     # create model
     model = vae_model.Db_vae(z_dim=ARGS.zdim, device=DEVICE).to(DEVICE)
