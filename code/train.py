@@ -4,6 +4,8 @@ In this file the training of the network is done
 
 import torch
 import torch.functional as F
+import numpy as np
+
 import vae_model
 import argparse
 from setup import config
@@ -25,7 +27,59 @@ ARGS = None
 def calculate_accuracy(labels, pred):
     return float(((pred > 0) == (labels > 0)).sum()) / labels.size()[0]
 
-def calculate_scores(labels, pred):
+def remove_frame(plt):
+    frame = plt.gca()
+    for xlabel_i in frame.axes.get_xticklabels():
+        xlabel_i.set_visible(False)
+        xlabel_i.set_fontsize(0.0)
+    for xlabel_i in frame.axes.get_yticklabels():
+        xlabel_i.set_fontsize(0.0)
+        xlabel_i.set_visible(False)
+    for tick in frame.axes.get_xticklines():
+        tick.set_visible(False)
+    for tick in frame.axes.get_yticklines():
+        tick.set_visible(False)
+
+def print_best_and_worst(images, labels, pred, epoch):
+    n_rows = 4
+    n_samples = n_rows**2
+
+    labels = labels.float().cpu()
+
+    pred = pred.cpu()
+
+    faces_max = torch.Tensor([x for x in pred])
+    faces_min = torch.Tensor([x for x in pred])
+    other_max = torch.Tensor([x for x in pred])
+    other_min = torch.Tensor([x for x in pred])
+
+    faces_max[labels == 0] = np.inf
+    faces_min[labels == 0] = -np.inf
+    other_max[labels == 1] = np.inf
+    other_min[labels == 1] = -np.inf
+
+    worst_faces = faces_max.argsort()[:n_samples]
+    best_faces = faces_min.argsort()[-n_samples:].numpy()
+
+    worst_other = other_min.argsort()[-n_samples:].numpy()
+    best_other = other_max.argsort()[:n_samples]
+
+    fig=plt.figure(figsize=(16, 16))
+
+    sub_titles = ["Best faces", "Worst faces", "Best non-faces", "Worst non-faces"]
+    for i, indeces in enumerate([best_faces, worst_faces, best_other, worst_other]):
+        ax = fig.add_subplot(2, 2, i+1)
+        grid = make_grid(images[indeces].reshape(n_samples,3,64,64), n_rows)
+        plt.imshow(grid.permute(1,2,0).cpu())
+        ax.set_title(sub_titles[i], fontdict={"fontsize":30})
+
+        remove_frame(plt)
+
+
+    fig.savefig('images/best_and_worst/epoch:{}'.format(epoch), bbox_inches='tight')
+
+    plt.close()
+    
     return
 
 def debug_memory():
@@ -53,37 +107,15 @@ def print_reconstruction(model, data, epoch):
     grid = make_grid(images.reshape(n_samples,3,64,64), n_rows)
     plt.imshow(grid.permute(1,2,0).cpu())
 
-    ########## REMOVE FRAME ##########
-    frame = plt.gca()
-    for xlabel_i in frame.axes.get_xticklabels():
-        xlabel_i.set_visible(False)
-        xlabel_i.set_fontsize(0.0)
-    for xlabel_i in frame.axes.get_yticklabels():
-        xlabel_i.set_fontsize(0.0)
-        xlabel_i.set_visible(False)
-    for tick in frame.axes.get_xticklines():
-        tick.set_visible(False)
-    for tick in frame.axes.get_yticklines():
-        tick.set_visible(False)
+    remove_frame(plt)
 
     fig.add_subplot(1, 2, 2)
     grid = make_grid(recon_images.reshape(n_samples,3,64,64), n_rows)
     plt.imshow(grid.permute(1,2,0).cpu())
 
-    ########## REMOVE FRAME ##########
-    frame = plt.gca()
-    for xlabel_i in frame.axes.get_xticklabels():
-        xlabel_i.set_visible(False)
-        xlabel_i.set_fontsize(0.0)
-    for xlabel_i in frame.axes.get_yticklabels():
-        xlabel_i.set_fontsize(0.0)
-        xlabel_i.set_visible(False)
-    for tick in frame.axes.get_xticklines():
-        tick.set_visible(False)
-    for tick in frame.axes.get_yticklines():
-        tick.set_visible(False)
+    remove_frame(plt)
 
-    fig.savefig('images/training_epoch={}'.format(epoch), bbox_inches='tight')
+    fig.savefig('images/reconstructions/epoch={}'.format(epoch), bbox_inches='tight')
 
     plt.close()
     return 
@@ -105,6 +137,8 @@ def train_epoch(model, data_loader, optimizer):
 
         images = images.to(DEVICE)
         labels = labels.to(DEVICE)
+
+        # Detect anomalies
         with torch.autograd.detect_anomaly():
             pred, loss = model.forward(images, labels)
 
@@ -127,7 +161,7 @@ def train_epoch(model, data_loader, optimizer):
 
     return avg_loss/(i+1), avg_acc/(i+1)
 
-def eval_epoch(model, data_loader):
+def eval_epoch(model, data_loader, epoch):
     """
     Calculates the validation error of the model
     """
@@ -153,6 +187,7 @@ def eval_epoch(model, data_loader):
             avg_loss += loss.item()
             avg_acc += acc
 
+    print_best_and_worst(images, labels, pred, epoch)
     return avg_loss/(i+1), avg_acc/(i+1)
 
 def main():
@@ -170,7 +205,7 @@ def main():
         print("Starting epoch:{}/{}".format(epoch, ARGS.epochs))
         train_error, train_acc = train_epoch(model, train_loader, optimizer)
         print("training done")
-        val_error, val_acc = eval_epoch(model, valid_loader)
+        val_error, val_acc = eval_epoch(model, valid_loader, epoch)
 
         print("epoch {}/{}, train_error={:.2f}, train_acc={:.2f}, val_error={:.2f}, val_acc={:.2f}".format(epoch, 
                                     ARGS.epochs, train_error, train_acc, val_error, val_acc))
