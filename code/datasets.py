@@ -124,8 +124,8 @@ def train_and_valid_loaders(
     dataset_valid: Dataset = concat_datasets(celeb_valid, imagenet_valid, proportion_faces)
 
     # Define the loaders
-    train_loader: DataLoader = DataLoader(dataset_train, batch_size=batch_size, shuffle=shuffle)
-    valid_loader: DataLoader = DataLoader(dataset_valid, batch_size=batch_size, shuffle=False)
+    train_loader: DataLoader = DataLoader(dataset_train, batch_size=batch_size, shuffle=shuffle, num_workers=5)
+    valid_loader: DataLoader = DataLoader(dataset_valid, batch_size=batch_size, shuffle=False, num_workers=5)
 
     return train_loader, valid_loader, dataset_train, dataset_valid
 

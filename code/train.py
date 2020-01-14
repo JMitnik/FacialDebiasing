@@ -105,13 +105,12 @@ def train_epoch(model, data_loader, optimizer):
 
         images = images.to(DEVICE)
         labels = labels.to(DEVICE)
-        with torch.autograd.detect_anomaly():
-            pred, loss = model.forward(images, labels)
+        pred, loss = model.forward(images, labels)
 
-            optimizer.zero_grad()
-            loss = loss/batch_size
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5)
+        optimizer.zero_grad()
+        loss = loss/batch_size
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5)
 
         optimizer.step()
 
