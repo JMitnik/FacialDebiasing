@@ -1,5 +1,5 @@
 from load import sample_train_dataset
-from datasets import train_and_valid_loaders
+from datasets import sample_dataset, train_and_valid_loaders
 import unittest
 import numpy as np
 from collections import Counter
@@ -18,7 +18,7 @@ class DatasetTest(unittest.TestCase):
 
         self.assertEqual(len(face_labels),len(nonface_labels))
 
-    def test_6050Ui_split(self):
+    def test_unequal_split(self):
         _, _, sample_train_dataset, sample_valid_dataset = train_and_valid_loaders(2, max_images=100, proportion_faces=0.6)
 
         labels = [i[1][1] for i in list(enumerate(sample_train_dataset))]
@@ -38,6 +38,9 @@ class DatasetTest(unittest.TestCase):
         for idx in idxs_valid:
             sample_valid_dataset[idx]
 
+        sample_train_dataset[15600]
+        sample_valid_dataset[5600]
+
     def test_variety_in_training(self):
         _, _, sample_train_dataset, sample_valid_dataset = train_and_valid_loaders(1, max_images=100)
 
@@ -54,6 +57,12 @@ class DatasetTest(unittest.TestCase):
         self.assertGreaterEqual(counter['face'], 30)
         self.assertGreaterEqual(counter['nonface'], 30)
 
+    def test_sample_dataset_10(self):
+        _, _, sample_train_dataset, sample_valid_dataset = train_and_valid_loaders(1, max_images=100)
+
+        items = sample_dataset(sample_train_dataset, 10)
+
+        self.assertEqual(items.shape[0], 10)
 
 
 if __name__ == '__main__':
