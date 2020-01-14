@@ -1,5 +1,5 @@
 import torch
-from torch.utils.data import Dataset as TorchDataset, ConcatDataset, DataLoader, random_split, Dataset, RandomSampler
+from torch.utils.data import Dataset as TorchDataset, ConcatDataset, DataLoader, Dataset, Sampler
 from torch.utils.data.dataset import Subset
 import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
@@ -44,7 +44,7 @@ class CelebDataset(TorchDataset):
         img = self.transform(img)
         label: int = DataLabel.POSITIVE.value
 
-        return img, label
+        return img, label, idx
 
     def sample(self, amount: int):
         max_idx: int = len(self)
@@ -62,7 +62,7 @@ class ImagenetDataset(ImageFolder):
     def __getitem__(self, idx: int):
         # Override label with negative
         img, _ = super().__getitem__(idx)
-        return (img, DataLabel.NEGATIVE.value)
+        return (img, DataLabel.NEGATIVE.value, idx)
 
     def sample(self, amount: int):
         max_idx: int = len(self)
@@ -71,7 +71,6 @@ class ImagenetDataset(ImageFolder):
         return [self.__getitem__(idx) for idx in idxs]
 
 def split_dataset(dataset, train_size: float, max_images: Optional[int] = None):
-    # TODO: Test
     # Shuffle indices of the dataset
     idxs: np.array = np.arange(len(dataset))
     np.random.seed(config.random_seed)
@@ -110,6 +109,7 @@ def train_and_valid_loaders(
     train_size: float = 0.8,
     proportion_faces: float = 0.5,
     max_images: Optional[int] = None,
+    reduce_bias: bool = False
 ):
     # Create the datasets
     imagenet_dataset: Dataset = ImagenetDataset(config.path_to_imagenet_images)
@@ -125,7 +125,7 @@ def train_and_valid_loaders(
 
     # Define the loaders
     train_loader: DataLoader = DataLoader(dataset_train, batch_size=batch_size, shuffle=shuffle)
-    valid_loader: DataLoader = DataLoader(dataset_valid, batch_size=batch_size, shuffle=shuffle)
+    valid_loader: DataLoader = DataLoader(dataset_valid, batch_size=batch_size, shuffle=False)
 
     return train_loader, valid_loader, dataset_train, dataset_valid
 
