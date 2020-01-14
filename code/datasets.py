@@ -116,3 +116,8 @@ def sample_dataset(dataset: Dataset, nr_samples: int):
 
     return torch.stack([dataset[idx][0] for idx in idxs])
 
+def sample_idxs_from_sub_dataset(idxs, data_loader, label):
+    dataset = data_loader.dataset.datasets[label].dataset.dataset
+
+    return torch.stack([dataset[idx] for idx in idxs])
+
