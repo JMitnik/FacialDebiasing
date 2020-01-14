@@ -98,7 +98,7 @@ def train_epoch(model, data_loader, optimizer):
     avg_acc = 0
 
     for i, batch in enumerate(data_loader):
-        images, labels = batch
+        images, labels, index = batch
         batch_size = labels.size(0)
 
         # print("TRAIN => BATCH SIZE:", batch_size)
@@ -139,7 +139,7 @@ def eval_epoch(model, data_loader):
 
     with torch.no_grad():
         for i, batch in enumerate(data_loader):
-            images, labels = batch
+            images, labels, index = batch
             batch_size = labels.size(0)
 
             images = images.to(DEVICE)
