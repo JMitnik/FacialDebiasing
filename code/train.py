@@ -4,11 +4,13 @@ In this file the training of the network is done
 
 import torch
 import torch.functional as F
+import numpy as np
+
 import vae_model
 import argparse
 from setup import config
 from torch.utils.data import ConcatDataset, DataLoader
-from datasets import train_and_valid_loaders, sample_dataset
+from datasets import train_and_valid_loaders, sample_dataset, sample_idxs_from_loader
 
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
@@ -25,7 +27,71 @@ ARGS = None
 def calculate_accuracy(labels, pred):
     return float(((pred > 0) == (labels > 0)).sum()) / labels.size()[0]
 
-def calculate_scores(labels, pred):
+def remove_frame(plt):
+    frame = plt.gca()
+    for xlabel_i in frame.axes.get_xticklabels():
+        xlabel_i.set_visible(False)
+        xlabel_i.set_fontsize(0.0)
+    for xlabel_i in frame.axes.get_yticklabels():
+        xlabel_i.set_fontsize(0.0)
+        xlabel_i.set_visible(False)
+    for tick in frame.axes.get_xticklines():
+        tick.set_visible(False)
+    for tick in frame.axes.get_yticklines():
+        tick.set_visible(False)
+
+def get_best_and_worst(labels, pred):
+    n_rows = 4
+    n_samples = n_rows**2
+
+    labels = labels.float().cpu()
+    print("face procentage:", float(labels.sum().item())/len(labels))
+
+    pred = pred.cpu()
+
+    faces_max = torch.Tensor([x for x in pred])
+    faces_min = torch.Tensor([x for x in pred])
+    other_max = torch.Tensor([x for x in pred])
+    other_min = torch.Tensor([x for x in pred])
+
+    faces_max[labels == 0] = np.inf
+    faces_min[labels == 0] = -np.inf
+    other_max[labels == 1] = np.inf
+    other_min[labels == 1] = -np.inf
+
+    worst_faces = faces_max.argsort()[:n_samples]
+    best_faces = faces_min.argsort(descending=True)[:n_samples]
+
+    worst_other = other_min.argsort(descending=True)[:n_samples]
+    best_other = other_max.argsort()[:n_samples]
+
+    return best_faces, worst_faces, best_other, worst_other
+
+def visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other):
+    n_rows = 4
+    n_samples = n_rows**2
+    
+    fig=plt.figure(figsize=(16, 16))
+
+    sub_titles = ["Best faces", "Worst faces", "Best non-faces", "Worst non-faces"]
+    for i, indeces in enumerate([best_faces, worst_faces, best_other, worst_other]):
+        labels = all_labels[indeces]
+        indeces = all_indeces[indeces]
+
+        images = sample_idxs_from_loader(indeces, data_loader, labels[0])
+
+        ax = fig.add_subplot(2, 2, i+1)
+        grid = make_grid(images.reshape(n_samples,3,64,64), n_rows)
+        plt.imshow(grid.permute(1,2,0).cpu())
+        ax.set_title(sub_titles[i], fontdict={"fontsize":30})
+
+        remove_frame(plt)
+
+
+    fig.savefig('images/best_and_worst/epoch:{}'.format(epoch), bbox_inches='tight')
+
+    plt.close()
+    
     return
 
 def debug_memory():
@@ -53,40 +119,18 @@ def print_reconstruction(model, data, epoch):
     grid = make_grid(images.reshape(n_samples,3,64,64), n_rows)
     plt.imshow(grid.permute(1,2,0).cpu())
 
-    ########## REMOVE FRAME ##########
-    frame = plt.gca()
-    for xlabel_i in frame.axes.get_xticklabels():
-        xlabel_i.set_visible(False)
-        xlabel_i.set_fontsize(0.0)
-    for xlabel_i in frame.axes.get_yticklabels():
-        xlabel_i.set_fontsize(0.0)
-        xlabel_i.set_visible(False)
-    for tick in frame.axes.get_xticklines():
-        tick.set_visible(False)
-    for tick in frame.axes.get_yticklines():
-        tick.set_visible(False)
+    remove_frame(plt)
 
     fig.add_subplot(1, 2, 2)
     grid = make_grid(recon_images.reshape(n_samples,3,64,64), n_rows)
     plt.imshow(grid.permute(1,2,0).cpu())
 
-    ########## REMOVE FRAME ##########
-    frame = plt.gca()
-    for xlabel_i in frame.axes.get_xticklabels():
-        xlabel_i.set_visible(False)
-        xlabel_i.set_fontsize(0.0)
-    for xlabel_i in frame.axes.get_yticklabels():
-        xlabel_i.set_fontsize(0.0)
-        xlabel_i.set_visible(False)
-    for tick in frame.axes.get_xticklines():
-        tick.set_visible(False)
-    for tick in frame.axes.get_yticklines():
-        tick.set_visible(False)
+    remove_frame(plt)
 
-    fig.savefig('images/training_epoch={}'.format(epoch), bbox_inches='tight')
+    fig.savefig('images/reconstructions/epoch={}'.format(epoch), bbox_inches='tight')
 
     plt.close()
-    return 
+    return
 
 def train_epoch(model, data_loader, optimizer):
     """
@@ -115,26 +159,30 @@ def train_epoch(model, data_loader, optimizer):
         optimizer.step()
 
         acc = calculate_accuracy(labels, pred)
-
         avg_loss += loss.item()
         avg_acc += acc
 
+        # print_best_and_worst(images, labels, pred, 123)
+
         if i % ARGS.eval_freq == 0:
             print("batch:{} accuracy:{}".format(i, acc))
-            
+
     # debug_memory()
 
     return avg_loss/(i+1), avg_acc/(i+1)
 
-def eval_epoch(model, data_loader):
+def eval_epoch(model, data_loader, epoch):
     """
     Calculates the validation error of the model
     """
 
     model.eval()
-    
     avg_loss = 0
     avg_acc = 0
+
+    all_labels = torch.LongTensor([]).to(DEVICE)
+    all_preds = torch.Tensor([]).to(DEVICE)
+    all_indeces = torch.LongTensor([]).to(DEVICE)
 
     with torch.no_grad():
         for i, batch in enumerate(data_loader):
@@ -143,6 +191,7 @@ def eval_epoch(model, data_loader):
 
             images = images.to(DEVICE)
             labels = labels.to(DEVICE)
+            index = index.to(DEVICE)
 
             pred, loss = model.forward(images, labels)
 
@@ -152,12 +201,23 @@ def eval_epoch(model, data_loader):
             avg_loss += loss.item()
             avg_acc += acc
 
+            all_labels = torch.cat((all_labels, labels))
+            all_preds = torch.cat((all_preds, pred))
+            all_indeces = torch.cat((all_indeces, index))
+
+    print("length of all eval:", len(all_labels))
+    best_faces, worst_faces, best_other, worst_other = get_best_and_worst(all_labels, all_preds)
+
+    visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other)
     return avg_loss/(i+1), avg_acc/(i+1)
 
 def main():
     # import data
-    train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size, 
+    train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size,
                                                                                  train_size=0.8, max_images=ARGS.dataset_size)
+
+    # train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size, 
+    #                                                                              train_size=0.8)
 
     # create model
     model = vae_model.Db_vae(z_dim=ARGS.zdim, device=DEVICE).to(DEVICE)
@@ -169,9 +229,9 @@ def main():
         print("Starting epoch:{}/{}".format(epoch, ARGS.epochs))
         train_error, train_acc = train_epoch(model, train_loader, optimizer)
         print("training done")
-        val_error, val_acc = eval_epoch(model, valid_loader)
+        val_error, val_acc = eval_epoch(model, valid_loader, epoch)
 
-        print("epoch {}/{}, train_error={:.2f}, train_acc={:.2f}, val_error={:.2f}, val_acc={:.2f}".format(epoch, 
+        print("epoch {}/{}, train_error={:.2f}, train_acc={:.2f}, val_error={:.2f}, val_acc={:.2f}".format(epoch,
                                     ARGS.epochs, train_error, train_acc, val_error, val_acc))
 
         print_reconstruction(model, valid_data, epoch)
@@ -193,7 +253,7 @@ if __name__ == "__main__":
                         help='total size of database')
     parser.add_argument('--eval_freq', default=5, type=int,
                         help='total size of database')
-    
+
 
     ARGS = parser.parse_args()
 
