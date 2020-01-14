@@ -76,7 +76,7 @@ def get_best_and_worst(labels, pred):
 def visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other):
     n_rows = 4
     n_samples = n_rows**2
-    
+
     fig=plt.figure(figsize=(16, 16))
 
     sub_titles = ["Best faces", "Worst faces", "Best non-faces", "Worst non-faces"]
@@ -97,7 +97,7 @@ def visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_f
     fig.savefig('images/best_and_worst/epoch:{}'.format(epoch), bbox_inches='tight')
 
     plt.close()
-    
+
     return
 
 def debug_memory():
@@ -138,20 +138,21 @@ def print_reconstruction(model, data, epoch):
     plt.close()
     return
 
-def train_epoch(model, data_loader, optimizer):
+def train_epoch(model, data_loaders, optimizer):
     """
     train the model for one epoch
     """
+    face_loader, nonface_loader = data_loaders
 
     model.train()
     avg_loss = 0
     avg_acc = 0
 
-    for i, batch in enumerate(data_loader):
-        images, labels, index = batch
-        batch_size = labels.size(0)
+    for (face_batch, nonface_batch) in zip(face_loader, nonface_loader):
 
-        # print("TRAIN => BATCH SIZE:", batch_size)
+        images, labels, face_index = face_batch
+        images, labels, nonface_index = nonface_batch
+        batch_size = labels.size(0)
 
         images = images.to(DEVICE)
         labels = labels.to(DEVICE)
@@ -167,8 +168,6 @@ def train_epoch(model, data_loader, optimizer):
         acc = calculate_accuracy(labels, pred)
         avg_loss += loss.item()
         avg_acc += acc
-
-        # print_best_and_worst(images, labels, pred, 123)
 
         if i % ARGS.eval_freq == 0:
             print("batch:{} accuracy:{}".format(i, acc))
@@ -217,25 +216,32 @@ def eval_epoch(model, data_loader, epoch):
     visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other)
     return avg_loss/(i+1), avg_acc/(i+1)
 
+def make_hist(train_faces_loader: DataLoader):
+    nr_elements = len(train_faces_loader.dataset)
+
+    return torch.rand(nr_elements)
+
 def main():
-    # import data
-    # train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size,
-    #                                                                              train_size=0.8, max_images=ARGS.dataset_size)
+    train_loaders, valid_loaders = train_and_valid_loaders(batch_size=ARGS.batch_size, train_size=0.8)
 
-    train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size, 
-                                                                                 train_size=0.8)
-
-    # create model
+    # Initialize model
     model = vae_model.Db_vae(z_dim=ARGS.zdim, device=DEVICE).to(DEVICE)
 
-    # create optimizer
+    # Initialize optimizer
     optimizer = torch.optim.Adam(model.parameters())
 
     for epoch in range(ARGS.epochs):
+        # Histogram re-initialized (starts histogram)
+        # Expect histogram
+        train_face_loader, train_nonface_loader = train_loaders
+
+        hist = make_hist(train_face_loader)
+        train_face_loader.batch_sampler.sampler.weights = hist
+
         print("Starting epoch:{}/{}".format(epoch, ARGS.epochs))
-        train_error, train_acc = train_epoch(model, train_loader, optimizer)
+        train_error, train_acc = train_epoch(model, train_loaders, optimizer)
         print("training done")
-        val_error, val_acc = eval_epoch(model, valid_loader, epoch)
+        val_error, val_acc = eval_epoch(model, valid_loaders, epoch)
 
         print("epoch {}/{}, train_error={:.2f}, train_acc={:.2f}, val_error={:.2f}, val_acc={:.2f}".format(epoch,
                                     ARGS.epochs, train_error, train_acc, val_error, val_acc))
@@ -247,7 +253,7 @@ if __name__ == "__main__":
     print("start training")
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', default=128, type=int,
+    parser.add_argument('--batch_size', default=2, type=int,
                         help='size of batch')
     parser.add_argument('--epochs', default=10, type=int,
                         help='max number of epochs')

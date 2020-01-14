@@ -1,5 +1,5 @@
 import torch
-from torch.utils.data import Dataset as TorchDataset, ConcatDataset, DataLoader, Dataset, Sampler
+from torch.utils.data import Dataset as TorchDataset, ConcatDataset, DataLoader, Dataset, Sampler, WeightedRandomSampler, BatchSampler
 from torch.utils.data.dataset import Subset
 import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
@@ -8,14 +8,17 @@ import os
 import numpy as np
 import pandas as pd
 from PIL import Image
-from typing import Callable, Optional
+from typing import Callable, Optional, Tuple
 from enum import Enum
+
+from torch import float64
 
 # Default transform
 default_transform = transforms.Compose([
     transforms.Resize((64, 64)),
     transforms.ToTensor()
 ])
+
 
 class DataLabel(Enum):
     POSITIVE = 1
@@ -123,11 +126,22 @@ def train_and_valid_loaders(
     dataset_train: Dataset = concat_datasets(celeb_train, imagenet_train, proportion_faces)
     dataset_valid: Dataset = concat_datasets(celeb_valid, imagenet_valid, proportion_faces)
 
-    # Define the loaders
-    train_loader: DataLoader = DataLoader(dataset_train, batch_size=batch_size, shuffle=shuffle, num_workers=5)
-    valid_loader: DataLoader = DataLoader(dataset_valid, batch_size=batch_size, shuffle=False, num_workers=5)
+    # Nonfaces loaders
+    train_nonfaces_loader: DataLoader = DataLoader(imagenet_train, batch_size=batch_size, shuffle=shuffle, num_workers=5)
+    valid_nonfaces_loader: DataLoader = DataLoader(imagenet_valid, batch_size=batch_size, shuffle=False, num_workers=5)
 
-    return train_loader, valid_loader, dataset_train, dataset_valid
+    # Define the sampler
+    weights_sampler_train = WeightedRandomSampler(torch.ones(len(celeb_train), dtype=float64), batch_size, replacement=False)
+    batch_sampler = BatchSampler(weights_sampler_train, batch_size, drop_last=True)
+
+    # Define the face loaders
+    train_faces_loader: DataLoader = DataLoader(celeb_train, batch_sampler=batch_sampler)
+    valid_faces_loader: DataLoader = DataLoader(celeb_valid, batch_size=batch_size, shuffle=shuffle, num_workers=5)
+
+    train_loaders: Tuple[DataLoader, DataLoader] = (train_faces_loader, train_nonfaces_loader)
+    valid_loaders: Tuple[DataLoader, DataLoader] = (valid_faces_loader, valid_nonfaces_loader)
+
+    return train_loaders, valid_loaders
 
 def sample_dataset(dataset: Dataset, nr_samples: int):
     max_nr_items: int = min(nr_samples, len(dataset))
