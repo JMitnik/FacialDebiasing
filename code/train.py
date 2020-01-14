@@ -132,7 +132,6 @@ def eval_epoch(model, data_loader):
     """
 
     model.eval()
-
     avg_loss = 0
     avg_acc = 0
 
