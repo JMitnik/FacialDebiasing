@@ -22,6 +22,7 @@ import os
 
 FOLDER_NAME = "images_{}".format(datetime.datetime.now())
 os.makedirs("images/"+ FOLDER_NAME + '/best_and_worst')
+os.makedirs("images/"+ FOLDER_NAME + '/base_vs_our')
 os.makedirs("images/"+ FOLDER_NAME + '/reconstructions')
 
 
@@ -140,6 +141,76 @@ def print_reconstruction(model, data, epoch):
     plt.close()
     return
 
+def update_histogram(model, data_loader, epoch):
+    all_labels = torch.LongTensor([]).to(DEVICE)
+    all_index = torch.LongTensor([]).to(DEVICE)
+
+    with torch.no_grad():
+        for i, batch in enumerate(data_loader):
+            images, labels, index = batch
+            
+            #TEMPORARY TAKE ONLY FACES
+            slicer = labels == 1
+            images, labels, index = images[slicer], labels[slicer], index[slicer]
+
+
+            batch_size = labels.size(0)
+
+            images = images.to(DEVICE)
+            labels = labels.to(DEVICE)
+            index = index.to(DEVICE)
+
+            all_labels = torch.cat((all_labels, labels))
+            all_index = torch.cat((all_index, index))
+            model.build_histo(images)
+
+        base = model.get_histo_base()
+        our = model.get_histo()
+        difference = base-our
+        # print("Base version:")
+        # print(base)
+        # print('Our version:')
+        # print(our)
+        # print('diff:')
+        # print(difference)
+
+    n_rows = 3
+    n_samples = n_rows**2
+
+    highest_base = base.argsort(descending=True)[:n_samples]
+    highest_our = our.argsort(descending=True)[:n_samples]
+
+    print("highest => base:{}, our:{}".format(highest_base, highest_our))
+
+    print(all_index[highest_base])
+    print(all_labels[highest_base])
+
+    img_base = sample_idxs_from_loader(all_index[highest_base], data_loader, 1)
+    img_our = sample_idxs_from_loader(all_index[highest_our], data_loader, 1)
+
+    fig=plt.figure(figsize=(16, 8))
+
+    ax = fig.add_subplot(1, 2, 1)
+    grid = make_grid(img_base.reshape(n_samples,3,64,64), n_rows)
+    plt.imshow(grid.permute(1,2,0).cpu())
+    ax.set_title("base", fontdict={"fontsize":30})
+
+    remove_frame(plt)
+
+    ax = fig.add_subplot(1, 2, 2)
+    grid = make_grid(img_our.reshape(n_samples,3,64,64), n_rows)
+    plt.imshow(grid.permute(1,2,0).cpu())
+    ax.set_title("our", fontdict={"fontsize":30})
+
+    remove_frame(plt)
+
+    fig.savefig('images/{}/base_vs_our/epoch={}'.format(FOLDER_NAME, epoch), bbox_inches='tight')
+    print("DONE WITH UPDATE")
+
+    plt.close()
+    return
+
+
 def train_epoch(model, data_loader, optimizer):
     """
     train the model for one epoch
@@ -149,7 +220,7 @@ def train_epoch(model, data_loader, optimizer):
     avg_loss = 0
     avg_acc = 0
 
-
+    print("START TRAINING")
     for i, batch in enumerate(data_loader):
         images, labels, index = batch
         batch_size = labels.size(0)
@@ -180,6 +251,7 @@ def train_epoch(model, data_loader, optimizer):
 
     return avg_loss/(i+1), avg_acc/(i+1)
 
+
 def eval_epoch(model, data_loader, epoch):
     """
     Calculates the validation error of the model
@@ -201,7 +273,6 @@ def eval_epoch(model, data_loader, epoch):
             images = images.to(DEVICE)
             labels = labels.to(DEVICE)
             index = index.to(DEVICE)
-
             pred, loss = model.forward(images, labels)
 
             loss = loss/batch_size
@@ -213,11 +284,12 @@ def eval_epoch(model, data_loader, epoch):
             all_labels = torch.cat((all_labels, labels))
             all_preds = torch.cat((all_preds, pred))
             all_indeces = torch.cat((all_indeces, index))
+        
 
     print("length of all eval:", len(all_labels))
-    best_faces, worst_faces, best_other, worst_other = get_best_and_worst(all_labels, all_preds)
+    # best_faces, worst_faces, best_other, worst_other = get_best_and_worst(all_labels, all_preds)
 
-    visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other)
+    # visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other)
     return avg_loss/(i+1), avg_acc/(i+1)
 
 def main():
@@ -236,6 +308,7 @@ def main():
 
     for epoch in range(ARGS.epochs):
         print("Starting epoch:{}/{}".format(epoch, ARGS.epochs))
+        update_histogram(model, train_loader, epoch)
         train_error, train_acc = train_epoch(model, train_loader, optimizer)
         print("training done")
         val_error, val_acc = eval_epoch(model, valid_loader, epoch)
