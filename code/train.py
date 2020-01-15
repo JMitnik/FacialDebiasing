@@ -5,12 +5,15 @@ In this file the training of the network is done
 import torch
 import torch.functional as F
 import numpy as np
+from typing import Tuple
+
+from torch.utils.data.sampler import SequentialSampler
 
 import vae_model
 import argparse
 from setup import config
 from torch.utils.data import ConcatDataset, DataLoader
-from datasets import train_and_valid_loaders, sample_dataset, sample_idxs_from_loader
+from datasets import DataLoaderTuple, train_and_valid_loaders, sample_dataset, sample_idxs_from_loader, make_hist_loader
 
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
@@ -138,20 +141,34 @@ def print_reconstruction(model, data, epoch):
     plt.close()
     return
 
-def train_epoch(model, data_loaders, optimizer):
+def concat_batches(batch_a, batch_b):
+    # TODO: Concatenate by interleaving the batches
+    images = torch.cat((batch_a[0], batch_b[0]), 0)
+    labels = torch.cat((batch_a[1], batch_b[1]), 0)
+    idxs = torch.cat((batch_a[2], batch_b[2]), 0)
+
+    return images, labels, idxs
+
+
+def train_epoch(model, data_loaders: DataLoaderTuple, optimizer):
     """
     train the model for one epoch
     """
+
     face_loader, nonface_loader = data_loaders
 
     model.train()
     avg_loss = 0
     avg_acc = 0
 
-    for (face_batch, nonface_batch) in zip(face_loader, nonface_loader):
+    # The batches contain Image(rgb x w x h), Labels (1 for 0), original dataset indices
+    face_batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+    nonface_batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
-        images, labels, face_index = face_batch
-        images, labels, nonface_index = nonface_batch
+    # TODO: divide the batch-size of the loader to ensure a smaller batch-size
+    for i, (face_batch, nonface_batch) in enumerate(zip(face_loader, nonface_loader)):
+        images, labels, idxs = concat_batches(face_batch, nonface_batch)
+
         batch_size = labels.size(0)
 
         images = images.to(DEVICE)
@@ -176,10 +193,11 @@ def train_epoch(model, data_loaders, optimizer):
 
     return avg_loss/(i+1), avg_acc/(i+1)
 
-def eval_epoch(model, data_loader, epoch):
+def eval_epoch(model, data_loaders: DataLoaderTuple, epoch):
     """
     Calculates the validation error of the model
     """
+    face_loader, nonface_loader = data_loaders
 
     model.eval()
     avg_loss = 0
@@ -190,8 +208,8 @@ def eval_epoch(model, data_loader, epoch):
     all_indeces = torch.LongTensor([]).to(DEVICE)
 
     with torch.no_grad():
-        for i, batch in enumerate(data_loader):
-            images, labels, index = batch
+        for i, (face_batch, nonface_batch) in enumerate(zip(face_loader, nonface_loader)):
+            images, labels, idxs = concat_batches(face_batch, nonface_batch)
             batch_size = labels.size(0)
 
             images = images.to(DEVICE)
@@ -216,12 +234,10 @@ def eval_epoch(model, data_loader, epoch):
     visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other)
     return avg_loss/(i+1), avg_acc/(i+1)
 
-def make_hist(train_faces_loader: DataLoader):
-    nr_elements = len(train_faces_loader.dataset)
-
-    return torch.rand(nr_elements)
-
 def main():
+    train_loaders: DataLoaderTuple
+    valid_loaders: DataLoaderTuple
+
     train_loaders, valid_loaders = train_and_valid_loaders(batch_size=ARGS.batch_size, train_size=0.8)
 
     # Initialize model
@@ -231,12 +247,11 @@ def main():
     optimizer = torch.optim.Adam(model.parameters())
 
     for epoch in range(ARGS.epochs):
-        # Histogram re-initialized (starts histogram)
-        # Expect histogram
-        train_face_loader, train_nonface_loader = train_loaders
+        # Generic sequential dataloader to sample histogram
+        hist_loader = make_hist_loader(train_loaders.faces.dataset, ARGS.batch_size)
 
-        hist = make_hist(train_face_loader)
-        train_face_loader.batch_sampler.sampler.weights = hist
+        # TODO: Switch the sampler weights with the actual histogram
+        # train_loaders.faces.batch_sampler.sampler.weights = torch.rand(len(train_loaders.faces.dataset))
 
         print("Starting epoch:{}/{}".format(epoch, ARGS.epochs))
         train_error, train_acc = train_epoch(model, train_loaders, optimizer)
@@ -253,6 +268,7 @@ if __name__ == "__main__":
     print("start training")
 
     parser = argparse.ArgumentParser()
+    # TODO: Reset batch_size
     parser.add_argument('--batch_size', default=2, type=int,
                         help='size of batch')
     parser.add_argument('--epochs', default=10, type=int,

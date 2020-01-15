@@ -1,5 +1,5 @@
 import torch
-from torch.utils.data import Dataset as TorchDataset, ConcatDataset, DataLoader, Dataset, Sampler, WeightedRandomSampler, BatchSampler
+from torch.utils.data import Dataset as TorchDataset, ConcatDataset, DataLoader, Dataset, Sampler, WeightedRandomSampler, BatchSampler, SequentialSampler
 from torch.utils.data.dataset import Subset
 import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
@@ -8,7 +8,7 @@ import os
 import numpy as np
 import pandas as pd
 from PIL import Image
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional, Tuple, NamedTuple
 from enum import Enum
 
 from torch import float64
@@ -19,6 +19,9 @@ default_transform = transforms.Compose([
     transforms.ToTensor()
 ])
 
+class DataLoaderTuple(NamedTuple):
+    faces: DataLoader
+    nonfaces: DataLoader
 
 class DataLabel(Enum):
     POSITIVE = 1
@@ -122,24 +125,23 @@ def train_and_valid_loaders(
     celeb_train, celeb_valid = split_dataset(celeb_dataset, train_size, max_images)
     imagenet_train, imagenet_valid = split_dataset(imagenet_dataset, train_size, max_images)
 
-    # Concat the sources of data by their proportions
-    dataset_train: Dataset = concat_datasets(celeb_train, imagenet_train, proportion_faces)
-    dataset_valid: Dataset = concat_datasets(celeb_valid, imagenet_valid, proportion_faces)
-
     # Nonfaces loaders
-    train_nonfaces_loader: DataLoader = DataLoader(imagenet_train, batch_size=batch_size, shuffle=shuffle, num_workers=5)
-    valid_nonfaces_loader: DataLoader = DataLoader(imagenet_valid, batch_size=batch_size, shuffle=False, num_workers=5)
+    train_nonfaces_loader: DataLoader = DataLoader(imagenet_train, batch_size=batch_size, shuffle=shuffle)
+    valid_nonfaces_loader: DataLoader = DataLoader(imagenet_valid, batch_size=batch_size, shuffle=False)
 
     # Define the sampler
-    weights_sampler_train = WeightedRandomSampler(torch.ones(len(celeb_train), dtype=float64), batch_size, replacement=False)
+    test = torch.Tensor(len(celeb_train)).fill_(0.01)
+    test[9] = 0.999
+
+    weights_sampler_train = WeightedRandomSampler(test, len(celeb_train), replacement=True)
     batch_sampler = BatchSampler(weights_sampler_train, batch_size, drop_last=True)
 
     # Define the face loaders
     train_faces_loader: DataLoader = DataLoader(celeb_train, batch_sampler=batch_sampler)
-    valid_faces_loader: DataLoader = DataLoader(celeb_valid, batch_size=batch_size, shuffle=shuffle, num_workers=5)
+    valid_faces_loader: DataLoader = DataLoader(celeb_valid, batch_size=batch_size, shuffle=shuffle)
 
-    train_loaders: Tuple[DataLoader, DataLoader] = (train_faces_loader, train_nonfaces_loader)
-    valid_loaders: Tuple[DataLoader, DataLoader] = (valid_faces_loader, valid_nonfaces_loader)
+    train_loaders: DataLoaderTuple = DataLoaderTuple(train_faces_loader, train_nonfaces_loader)
+    valid_loaders: DataLoaderTuple = DataLoaderTuple(valid_faces_loader, valid_nonfaces_loader)
 
     return train_loaders, valid_loaders
 
@@ -157,3 +159,8 @@ def sample_idxs_from_loader(idxs, data_loader, label):
 
     return torch.stack([dataset[idx.item()][0] for idx in idxs])
 
+def make_hist_loader(dataset, batch_size):
+    sampler = SequentialSampler(dataset)
+    batch_sampler = BatchSampler(sampler, batch_size=batch_size, drop_last=False)
+
+    return DataLoader(dataset, batch_sampler=batch_sampler)
