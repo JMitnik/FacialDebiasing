@@ -218,13 +218,13 @@ class Db_vae(nn.Module):
             Returns the probabilities given the means given the histo values
         """
 
-        print(self.means.shape)
+        # print(self.means.shape)
         weights = torch.Tensor().to(DEVICE)
         for mu in self.means:
             # Gets probability for each 
             newhist = torch.stack([torch.histc(i, 
-                                  min=self.min_mu, 
-                                  max=self.max_mu, 
+                                  min=self.min_val, 
+                                  max=self.max_val, 
                                   bins=self.num_bins) for i in mu])
             newhist *= self.hist
             newhist = newhist.sum(dim=1)
