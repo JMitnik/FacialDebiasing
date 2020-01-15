@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import Dataset as TorchDataset, ConcatDataset, DataLoader, Dataset, Sampler, WeightedRandomSampler, BatchSampler, SequentialSampler
 from torch.utils.data.dataset import Subset
+from torch.utils.data.sampler import RandomSampler
 import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
 from setup import config
@@ -115,7 +116,8 @@ def train_and_valid_loaders(
     train_size: float = 0.8,
     proportion_faces: float = 0.5,
     max_images: Optional[int] = None,
-    reduce_bias: bool = False
+    enable_debias: bool = True,
+    sample_bias_with_replacement: bool = True,
 ):
     # Create the datasets
     imagenet_dataset: Dataset = ImagenetDataset(config.path_to_imagenet_images)
@@ -129,15 +131,24 @@ def train_and_valid_loaders(
     train_nonfaces_loader: DataLoader = DataLoader(imagenet_train, batch_size=batch_size, shuffle=shuffle)
     valid_nonfaces_loader: DataLoader = DataLoader(imagenet_valid, batch_size=batch_size, shuffle=False)
 
-    # Define the sampler
-    test = torch.Tensor(len(celeb_train)).fill_(0.01)
-    test[9] = 0.999
+    # Init some weights
+    init_weights = torch.rand(len(celeb_train))
 
-    weights_sampler_train = WeightedRandomSampler(test, len(celeb_train), replacement=True)
-    batch_sampler = BatchSampler(weights_sampler_train, batch_size, drop_last=True)
+    # Debugging: Uncomment to see that item at index 9 occurs more oftne
+    # ❗ Important: Note that the indices dont have to be below 1
+    # START DEBUG
+    # test = torch.Tensor(len(celeb_train)).fill_(0.0001)
+    # test[9] = 10.999
+    # END DEBUG
+
+    # Define samplers: random for non-debias, weighed for debiasing
+    random_train_sampler = RandomSampler(celeb_train)
+    weights_sampler_train = WeightedRandomSampler(init_weights, len(celeb_train), replacement=sample_bias_with_replacement)
+
+    train_sampler = weights_sampler_train if enable_debias else random_train_sampler
 
     # Define the face loaders
-    train_faces_loader: DataLoader = DataLoader(celeb_train, batch_sampler=batch_sampler)
+    train_faces_loader: DataLoader = DataLoader(celeb_train, sampler=train_sampler, batch_size=batch_size)
     valid_faces_loader: DataLoader = DataLoader(celeb_valid, batch_size=batch_size, shuffle=shuffle)
 
     train_loaders: DataLoaderTuple = DataLoaderTuple(train_faces_loader, train_nonfaces_loader)

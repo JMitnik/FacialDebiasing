@@ -13,7 +13,7 @@ import vae_model
 import argparse
 from setup import config
 from torch.utils.data import ConcatDataset, DataLoader
-from datasets import DataLoaderTuple, train_and_valid_loaders, sample_dataset, sample_idxs_from_loader, make_hist_loader
+from datasets import DataLoaderTuple, concat_datasets, train_and_valid_loaders, sample_dataset, sample_idxs_from_loader, make_hist_loader
 
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
@@ -142,7 +142,7 @@ def print_reconstruction(model, data, epoch):
     return
 
 def concat_batches(batch_a, batch_b):
-    # TODO: Concatenate by interleaving the batches
+    # TODO: Merge by interleaving the batches
     images = torch.cat((batch_a[0], batch_b[0]), 0)
     labels = torch.cat((batch_a[1], batch_b[1]), 0)
     idxs = torch.cat((batch_a[2], batch_b[2]), 0)
@@ -165,7 +165,7 @@ def train_epoch(model, data_loaders: DataLoaderTuple, optimizer):
     face_batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
     nonface_batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
-    # TODO: divide the batch-size of the loader to ensure a smaller batch-size
+    # TODO: divide the batch-size of the loader over both face_Batch and nonface_batch, rather than doubling the batch-size
     for i, (face_batch, nonface_batch) in enumerate(zip(face_loader, nonface_loader)):
         images, labels, idxs = concat_batches(face_batch, nonface_batch)
 
@@ -251,7 +251,7 @@ def main():
         hist_loader = make_hist_loader(train_loaders.faces.dataset, ARGS.batch_size)
 
         # TODO: Switch the sampler weights with the actual histogram
-        # train_loaders.faces.batch_sampler.sampler.weights = torch.rand(len(train_loaders.faces.dataset))
+        # train_loaders.faces.sampler.weights = hist?
 
         print("Starting epoch:{}/{}".format(epoch, ARGS.epochs))
         train_error, train_acc = train_epoch(model, train_loaders, optimizer)
@@ -261,6 +261,7 @@ def main():
         print("epoch {}/{}, train_error={:.2f}, train_acc={:.2f}, val_error={:.2f}, val_acc={:.2f}".format(epoch,
                                     ARGS.epochs, train_error, train_acc, val_error, val_acc))
 
+        valid_data = concat_datasets(*valid_loaders, proportion_a=0.5)
         print_reconstruction(model, valid_data, epoch)
     return
 
@@ -268,8 +269,7 @@ if __name__ == "__main__":
     print("start training")
 
     parser = argparse.ArgumentParser()
-    # TODO: Reset batch_size
-    parser.add_argument('--batch_size', default=2, type=int,
+    parser.add_argument('--batch_size', default=128, type=int,
                         help='size of batch')
     parser.add_argument('--epochs', default=10, type=int,
                         help='max number of epochs')
