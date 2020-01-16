@@ -112,20 +112,22 @@ def concat_datasets(dataset_a, dataset_b, proportion_a):
 
 def train_and_valid_loaders(
     batch_size: int,
+    max_images: int,
     shuffle: bool = True,
     train_size: float = 0.8,
     proportion_faces: float = 0.5,
-    max_images: Optional[int] = None,
     enable_debias: bool = True,
     sample_bias_with_replacement: bool = True,
 ):
+    nr_images: Optional[int] = max_images if max_images >= 0 else None
+
     # Create the datasets
     imagenet_dataset: Dataset = ImagenetDataset(config.path_to_imagenet_images)
     celeb_dataset: Dataset = CelebDataset(config.path_to_celeba_images, config.path_to_celeba_bbox_file)
 
     # Split both datasets into training and validation
-    celeb_train, celeb_valid = split_dataset(celeb_dataset, train_size, max_images)
-    imagenet_train, imagenet_valid = split_dataset(imagenet_dataset, train_size, max_images)
+    celeb_train, celeb_valid = split_dataset(celeb_dataset, train_size, nr_images)
+    imagenet_train, imagenet_valid = split_dataset(imagenet_dataset, train_size, nr_images)
 
     # Nonfaces loaders
     train_nonfaces_loader: DataLoader = DataLoader(imagenet_train, batch_size=batch_size, shuffle=shuffle)
