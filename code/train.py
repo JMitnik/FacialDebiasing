@@ -78,7 +78,7 @@ def get_best_and_worst(labels, pred):
 
     return best_faces, worst_faces, best_other, worst_other
 
-def visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other):
+def visualize_best_and_worst(data_loader, all_labels, all_idxs, epoch, best_faces, worst_faces, best_other, worst_other):
     n_rows = 4
     n_samples = n_rows**2
 
@@ -87,7 +87,7 @@ def visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_f
     sub_titles = ["Best faces", "Worst faces", "Best non-faces", "Worst non-faces"]
     for i, indeces in enumerate([best_faces, worst_faces, best_other, worst_other]):
         labels = all_labels[indeces]
-        indeces = all_indeces[indeces]
+        indeces = all_idxs[indeces]
 
         images = sample_idxs_from_loader(indeces, data_loader, labels[0])
 
@@ -158,12 +158,6 @@ def update_histogram(model, data_loader, epoch):
     with torch.no_grad():
         for i, batch in enumerate(data_loader):
             images, labels, index = batch
-
-            #TEMPORARY TAKE ONLY FACES
-            slicer = labels == 1
-            images, labels, index = images[slicer], labels[slicer], index[slicer]
-
-
             batch_size = labels.size(0)
 
             images = images.to(DEVICE)
@@ -218,7 +212,7 @@ def update_histogram(model, data_loader, epoch):
     print("DONE WITH UPDATE")
 
     plt.close()
-    return
+    return base
 
 def train_epoch(model, data_loaders: DataLoaderTuple, optimizer):
     """
@@ -238,10 +232,7 @@ def train_epoch(model, data_loaders: DataLoaderTuple, optimizer):
     # TODO: divide the batch-size of the loader over both face_Batch and nonface_batch, rather than doubling the batch-size
     for i, (face_batch, nonface_batch) in enumerate(zip(face_loader, nonface_loader)):
         images, labels, idxs = concat_batches(face_batch, nonface_batch)
-
-    print("START TRAINING")
-    for i, batch in enumerate(data_loader):
-        images, labels, index = batch
+        print("START TRAINING")
         batch_size = labels.size(0)
 
         images = images.to(DEVICE)
@@ -278,7 +269,7 @@ def eval_epoch(model, data_loaders: DataLoaderTuple, epoch):
 
     all_labels = torch.LongTensor([]).to(DEVICE)
     all_preds = torch.Tensor([]).to(DEVICE)
-    all_indeces = torch.LongTensor([]).to(DEVICE)
+    all_idxs = torch.LongTensor([]).to(DEVICE)
 
     with torch.no_grad():
         for i, (face_batch, nonface_batch) in enumerate(zip(face_loader, nonface_loader)):
@@ -287,7 +278,7 @@ def eval_epoch(model, data_loaders: DataLoaderTuple, epoch):
 
             images = images.to(DEVICE)
             labels = labels.to(DEVICE)
-            index = index.to(DEVICE)
+            idxs = idxs.to(DEVICE)
             pred, loss = model.forward(images, labels)
 
             loss = loss/batch_size
@@ -298,13 +289,13 @@ def eval_epoch(model, data_loaders: DataLoaderTuple, epoch):
 
             all_labels = torch.cat((all_labels, labels))
             all_preds = torch.cat((all_preds, pred))
-            all_indeces = torch.cat((all_indeces, index))
+            all_idxs = torch.cat((all_idxs, idxs))
 
 
     print("length of all eval:", len(all_labels))
     # best_faces, worst_faces, best_other, worst_other = get_best_and_worst(all_labels, all_preds)
 
-    # visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other)
+    # visualize_best_and_worst(data_loader, all_labels, all_idxs, epoch, best_faces, worst_faces, best_other, worst_other)
     return avg_loss/(i+1), avg_acc/(i+1)
 
 def main():
@@ -326,12 +317,13 @@ def main():
     for epoch in range(ARGS.epochs):
         # Generic sequential dataloader to sample histogram
         hist_loader = make_hist_loader(train_loaders.faces.dataset, ARGS.batch_size)
+        hist = update_histogram(model, hist_loader, epoch)
 
-        # TODO: Switch the sampler weights with the actual histogram
-        # train_loaders.faces.sampler.weights = hist?
+        train_loaders.faces.sampler.weights = hist
+        train_loaders.faces.sampler.weights[9] = 50
+
 
         print("Starting epoch:{}/{}".format(epoch, ARGS.epochs))
-        update_histogram(model, train_loaders, epoch)
         train_error, train_acc = train_epoch(model, train_loaders, optimizer)
         print("training done")
         val_error, val_acc = eval_epoch(model, valid_loaders, epoch)
@@ -347,7 +339,7 @@ if __name__ == "__main__":
     print("start training")
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', default=128, type=int,
+    parser.add_argument('--batch_size', default=2, type=int,
                         help='size of batch')
     parser.add_argument('--epochs', default=10, type=int,
                         help='max number of epochs')
@@ -355,7 +347,7 @@ if __name__ == "__main__":
                         help='dimensionality of latent space')
     parser.add_argument('--alpha', default=0.0, type=float,
                         help='importance of debiasing')
-    parser.add_argument('--dataset_size', default=10000, type=int,
+    parser.add_argument('--dataset_size', default=100, type=int,
                         help='total size of database')
     parser.add_argument('--eval_freq', default=5, type=int,
                         help='total size of database')

@@ -166,7 +166,7 @@ def sample_dataset(dataset: Dataset, nr_samples: int):
 
 def sample_idxs_from_loader(idxs, data_loader, label):
     if label == 1:
-        dataset = data_loader.dataset.datasets[0].dataset.dataset
+        dataset = data_loader.dataset.dataset
     else:
         dataset = data_loader.dataset.datasets[1].dataset.dataset
 
