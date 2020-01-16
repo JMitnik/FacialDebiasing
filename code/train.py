@@ -20,11 +20,10 @@ import gc
 from collections import Counter
 import os
 
-FOLDER_NAME = "images_{}".format(datetime.datetime.now())
-os.makedirs("images/"+ FOLDER_NAME + '/best_and_worst')
-os.makedirs("images/"+ FOLDER_NAME + '/base_vs_our')
-os.makedirs("images/"+ FOLDER_NAME + '/reconstructions')
+FOLDER_NAME = ""
 
+if not os.path.exists("results"):
+    os.makedirs("results")
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -97,7 +96,7 @@ def visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_f
         remove_frame(plt)
 
 
-    fig.savefig('images/{}/best_and_worst/epoch:{}'.format(FOLDER_NAME,epoch), bbox_inches='tight')
+    fig.savefig('results/{}/best_and_worst/epoch:{}'.format(FOLDER_NAME,epoch), bbox_inches='tight')
 
     plt.close()
     
@@ -136,7 +135,7 @@ def print_reconstruction(model, data, epoch):
 
     remove_frame(plt)
 
-    fig.savefig('images/{}/reconstructions/epoch={}'.format(FOLDER_NAME, epoch), bbox_inches='tight')
+    fig.savefig('results/{}/reconstructions/epoch={}'.format(FOLDER_NAME, epoch), bbox_inches='tight')
 
     plt.close()
     return
@@ -167,44 +166,38 @@ def update_histogram(model, data_loader, epoch):
         base = model.get_histo_base()
         our = model.get_histo()
         difference = base-our
-        # print("Base version:")
-        # print(base)
-        # print('Our version:')
-        # print(our)
-        # print('diff:')
-        # print(difference)
 
     n_rows = 3
     n_samples = n_rows**2
 
-    highest_base = base.argsort(descending=True)[:n_samples]
-    highest_our = our.argsort(descending=True)[:n_samples]
+    best_base = base.argsort(descending=True)[:n_samples]
+    best_our = our.argsort(descending=True)[:n_samples]
+    worst_base = base.argsort()[:n_samples]
+    worst_our = our.argsort()[:n_samples]
 
-    print("highest => base:{}, our:{}".format(highest_base, highest_our))
+    print("best => base:{}, our:{}".format(best_base, best_our))
 
-    print(all_index[highest_base])
-    print(all_labels[highest_base])
+    print(all_index[best_base])
+    print(all_labels[best_base])
 
-    img_base = sample_idxs_from_loader(all_index[highest_base], data_loader, 1)
-    img_our = sample_idxs_from_loader(all_index[highest_our], data_loader, 1)
+    best_img_base = sample_idxs_from_loader(all_index[best_base], data_loader, 1)
+    best_img_our = sample_idxs_from_loader(all_index[best_our], data_loader, 1)
+    worst_img_base = sample_idxs_from_loader(all_index[worst_base], data_loader, 1)
+    worst_img_our = sample_idxs_from_loader(all_index[worst_our], data_loader, 1)
 
-    fig=plt.figure(figsize=(16, 8))
+    img_list = (best_img_base, best_img_our, worst_img_base, worst_img_our)
+    titles = ("best base", "best our", "worst base", "worst our")
+    fig=plt.figure(figsize=(16, 16))
 
-    ax = fig.add_subplot(1, 2, 1)
-    grid = make_grid(img_base.reshape(n_samples,3,64,64), n_rows)
-    plt.imshow(grid.permute(1,2,0).cpu())
-    ax.set_title("base", fontdict={"fontsize":30})
+    for i in range(4):
+        ax = fig.add_subplot(2, 2, i+1)
+        grid = make_grid(img_list[i].reshape(n_samples,3,64,64), n_rows)
+        plt.imshow(grid.permute(1,2,0).cpu())
+        ax.set_title(titles[i], fontdict={"fontsize":30})
 
-    remove_frame(plt)
+        remove_frame(plt)
 
-    ax = fig.add_subplot(1, 2, 2)
-    grid = make_grid(img_our.reshape(n_samples,3,64,64), n_rows)
-    plt.imshow(grid.permute(1,2,0).cpu())
-    ax.set_title("our", fontdict={"fontsize":30})
-
-    remove_frame(plt)
-
-    fig.savefig('images/{}/base_vs_our/epoch={}'.format(FOLDER_NAME, epoch), bbox_inches='tight')
+    fig.savefig('results/{}/base_vs_our/epoch={}'.format(FOLDER_NAME, epoch), bbox_inches='tight')
     print("DONE WITH UPDATE")
 
     plt.close()
@@ -297,9 +290,6 @@ def main():
     train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size,
                                                                                  train_size=0.8, max_images=ARGS.dataset_size)
 
-    # train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size, 
-    #                                                                              train_size=0.8)
-
     # create model
     model = vae_model.Db_vae(z_dim=ARGS.zdim, device=DEVICE).to(DEVICE)
 
@@ -309,14 +299,21 @@ def main():
     for epoch in range(ARGS.epochs):
         print("Starting epoch:{}/{}".format(epoch, ARGS.epochs))
         update_histogram(model, train_loader, epoch)
-        train_error, train_acc = train_epoch(model, train_loader, optimizer)
+        train_loss, train_acc = train_epoch(model, train_loader, optimizer)
         print("training done")
-        val_error, val_acc = eval_epoch(model, valid_loader, epoch)
+        val_loss, val_acc = eval_epoch(model, valid_loader, epoch)
 
-        print("epoch {}/{}, train_error={:.2f}, train_acc={:.2f}, val_error={:.2f}, val_acc={:.2f}".format(epoch,
-                                    ARGS.epochs, train_error, train_acc, val_error, val_acc))
+        print("epoch {}/{}, train_loss={:.2f}, train_acc={:.2f}, val_loss={:.2f}, val_acc={:.2f}".format(epoch,
+                                    ARGS.epochs, train_loss, train_acc, val_loss, val_acc))
 
         print_reconstruction(model, valid_data, epoch)
+
+        with open("results/"+FOLDER_NAME + "/training_results.csv", "a") as write_file:
+            s = "{},{},{},{},{}\n".format(epoch, train_loss, val_loss, train_acc, val_acc)
+            print("S:", s)
+            write_file.write(s)
+
+        torch.save(model.state_dict(), "results/"+FOLDER_NAME+"/model.pt".format(epoch))
     return
 
 if __name__ == "__main__":
@@ -331,12 +328,26 @@ if __name__ == "__main__":
                         help='dimensionality of latent space')
     parser.add_argument('--alpha', default=0.0, type=float,
                         help='importance of debiasing')
-    parser.add_argument('--dataset_size', default=10000, type=int,
+    parser.add_argument('--dataset_size', default=-1, type=int,
                         help='total size of database')
     parser.add_argument('--eval_freq', default=5, type=int,
                         help='total size of database')
 
 
     ARGS = parser.parse_args()
+
+    print("ARGS => batch_size:{}, epochs:{}, z_dim:{}, alpha:{}, dataset_size:{}, eval_freq:{}".format(ARGS.batch_size, 
+                                ARGS.epochs, ARGS.zdim, ARGS.alpha, ARGS.dataset_size, ARGS.eval_freq))
+
+    FOLDER_NAME = "results_zdim_{}_alpha_{}_batch_size_{}_size_{}_time_{}".format(ARGS.zdim, str(ARGS.alpha)[2:], 
+                                ARGS.batch_size, ARGS.dataset_size, datetime.datetime.now())
+
+    os.makedirs("results/"+ FOLDER_NAME + '/best_and_worst')
+    os.makedirs("results/"+ FOLDER_NAME + '/base_vs_our')
+    os.makedirs("results/"+ FOLDER_NAME + '/reconstructions')
+
+    with open("results/" + FOLDER_NAME + "/training_results.csv", "w") as write_file:
+        write_file.write("epoch, train_loss, valid_loss, train_acc, valid_acc\n")
+    
 
     main()

@@ -116,7 +116,7 @@ class Decoder(nn.Module):
 
 class Db_vae(nn.Module):
 
-    def __init__(self, z_dim=20, hist_size=1000, device="cpu"):
+    def __init__(self, z_dim=20, hist_size=1000, alpha=0.01, device="cpu"):
         super().__init__()
 
         self.device = device
@@ -137,7 +137,7 @@ class Db_vae(nn.Module):
         self.hist = torch.ones((z_dim, self.num_bins)).to(device)
         self.means = torch.Tensor().to(self.device).to(device)
         
-        self.alpha = 0.01
+        self.alpha = alpha
 
 
     def forward(self, images, labels):
@@ -187,6 +187,14 @@ class Db_vae(nn.Module):
             loss_total = loss_class * self.c1
 
         return pred, loss_total
+
+
+    def interpolate(self, img_1, img_2):
+        _, mean_1, std_1 = self.encoder(img_1.reshape(1,3,64,64))
+        _, mean_2, std_2 = self.encoder(img_2.reshape(1,3,64,64))
+
+
+
 
     def build_histo(self, input):
         """
