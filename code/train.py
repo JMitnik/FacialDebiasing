@@ -337,7 +337,7 @@ if __name__ == "__main__":
     print("start training")
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', default=2, type=int,
+    parser.add_argument('--batch_size', default=128, type=int,
                         help='size of batch')
     parser.add_argument('--epochs', default=10, type=int,
                         help='max number of epochs')
@@ -345,7 +345,7 @@ if __name__ == "__main__":
                         help='dimensionality of latent space')
     parser.add_argument('--alpha', default=0.0, type=float,
                         help='importance of debiasing')
-    parser.add_argument('--dataset_size', default=100, type=int,
+    parser.add_argument('--dataset_size', default=10000, type=int,
                         help='total size of database')
     parser.add_argument('--eval_freq', default=5, type=int,
                         help='total size of database')
