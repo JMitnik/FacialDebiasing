@@ -161,14 +161,24 @@ def train_and_valid_loaders(
 def sample_dataset(dataset: Dataset, nr_samples: int):
     max_nr_items: int = min(nr_samples, len(dataset))
     idxs = np.random.permutation(np.arange(len(dataset)))[:max_nr_items]
+    print(idxs)
 
     return torch.stack([dataset[idx][0] for idx in idxs])
 
+def sample_idxs_from_loaders(idxs, data_loaders, label):
+    if label == 1:
+        dataset = data_loaders.faces.dataset.dataset
+    else:
+        dataset = data_loaders.nonfaces.dataset.dataset
+
+    return torch.stack([dataset[idx.item()][0] for idx in idxs])
+
+
 def sample_idxs_from_loader(idxs, data_loader, label):
     if label == 1:
-        dataset = data_loader.faces.dataset.dataset
+        dataset = data_loader.dataset.dataset
     else:
-        dataset = data_loader.nonfaces.dataset.dataset
+        dataset = data_loader.dataset.dataset
 
     return torch.stack([dataset[idx.item()][0] for idx in idxs])
 

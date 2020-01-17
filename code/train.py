@@ -13,7 +13,7 @@ import vae_model
 import argparse
 from setup import config
 from torch.utils.data import ConcatDataset, DataLoader
-from datasets import DataLoaderTuple, concat_datasets, train_and_valid_loaders, sample_dataset, sample_idxs_from_loader, make_hist_loader
+from datasets import DataLoaderTuple, concat_datasets, train_and_valid_loaders, sample_dataset, sample_idxs_from_loaders, sample_idxs_from_loader, make_hist_loader
 
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
@@ -77,7 +77,7 @@ def get_best_and_worst(labels, pred):
 
     return best_faces, worst_faces, best_other, worst_other
 
-def visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other, n_rows=4):
+def visualize_best_and_worst(data_loaders, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other, n_rows=4):
     n_samples = n_rows**2
 
     fig=plt.figure(figsize=(16, 16))
@@ -86,7 +86,7 @@ def visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_f
     for i, indeces in enumerate((best_faces, worst_faces, best_other, worst_other)):
         labels, indeces = all_labels[indeces], all_indeces[indeces]
 
-        images = sample_idxs_from_loader(indeces, data_loader, labels[0])
+        images = sample_idxs_from_loaders(indeces, data_loaders, labels[0])
 
         ax = fig.add_subplot(2, 2, i+1)
         grid = make_grid(images.reshape(n_samples,3,64,64), n_rows)
@@ -113,6 +113,7 @@ def print_reconstruction(model, data, epoch, n_rows=4):
     model.eval()
     n_samples = n_rows**2
 
+    print(data)
     images = sample_dataset(data, n_samples).to(DEVICE)
 
     recon_images = model.recon_images(images)
@@ -181,8 +182,7 @@ def update_histogram(model, data_loader, epoch):
             images, labels, index = batch
 
             #TEMPORARY TAKE ONLY FACES
-            slicer = labels == 1
-            images, labels, index = images[slicer].to(DEVICE), labels[slicer].to(DEVICE), index[slicer].to(DEVICE)
+            images, labels, index = images.to(DEVICE), labels.to(DEVICE), index.to(DEVICE)
             batch_size = labels.size(0)
 
             all_labels = torch.cat((all_labels, labels))
@@ -312,14 +312,15 @@ def main():
             train_loaders.faces.sampler.weights = hist
 
 
-        train_loss, train_acc = train_epoch(model, train_loaders, optimizer)
+        # train_loss, train_acc = train_epoch(model, train_loaders, optimizer)
         print("training done")
         val_loss, val_acc = eval_epoch(model, valid_loaders, epoch)
 
-        print("epoch {}/{}, train_loss={:.2f}, train_acc={:.2f}, val_loss={:.2f}, val_acc={:.2f}".format(epoch+1,
-                                    ARGS.epochs, train_loss, train_acc, val_loss, val_acc))
+        # print("epoch {}/{}, train_loss={:.2f}, train_acc={:.2f}, val_loss={:.2f}, val_acc={:.2f}".format(epoch+1,
+        #                             ARGS.epochs, train_loss, train_acc, val_loss, val_acc))
 
-        valid_data = concat_datasets(*valid_loaders, proportion_a=0.5)
+        valid_data = concat_datasets(valid_loaders.faces, valid_loaders.nonfaces, proportion_a=0.5)
+        print(valid_data)
         print_reconstruction(model, valid_data, epoch)
 
         with open("results/"+FOLDER_NAME + "/training_results.csv", "a") as write_file:
@@ -333,7 +334,7 @@ if __name__ == "__main__":
     print("start training")
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', default=2, type=int,
+    parser.add_argument('--batch_size', default=256, type=int,
                         help='size of batch')
     parser.add_argument('--epochs', default=10, type=int,
                         help='max number of epochs')
@@ -341,7 +342,7 @@ if __name__ == "__main__":
                         help='dimensionality of latent space')
     parser.add_argument('--alpha', default=0.0, type=float,
                         help='importance of debiasing')
-    parser.add_argument('--dataset_size', default=100, type=int,
+    parser.add_argument('--dataset_size', default=-1, type=int,
                         help='total size of database')
     parser.add_argument('--eval_freq', default=5, type=int,
                         help='total size of database')
