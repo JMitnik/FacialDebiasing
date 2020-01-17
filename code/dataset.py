@@ -68,8 +68,8 @@ def make_train_and_valid_loaders(
     imagenet_train, imagenet_valid = split_dataset(imagenet_dataset, train_size, nr_images)
 
     # Nonfaces loaders
-    train_nonfaces_loader: DataLoader = DataLoader(imagenet_train, batch_size=batch_size, shuffle=shuffle)
-    valid_nonfaces_loader: DataLoader = DataLoader(imagenet_valid, batch_size=batch_size, shuffle=False)
+    train_nonfaces_loader: DataLoader = DataLoader(imagenet_train, batch_size=batch_size, shuffle=shuffle, num_workers=5)
+    valid_nonfaces_loader: DataLoader = DataLoader(imagenet_valid, batch_size=batch_size, shuffle=False, num_workers=5)
 
     # Init some weights
     init_weights = torch.rand(len(celeb_train)).tolist()
@@ -88,8 +88,8 @@ def make_train_and_valid_loaders(
     train_sampler = weights_sampler_train if enable_debias else random_train_sampler
 
     # Define the face loaders
-    train_faces_loader: DataLoader = DataLoader(celeb_train, sampler=train_sampler, batch_size=batch_size)
-    valid_faces_loader: DataLoader = DataLoader(celeb_valid, batch_size=batch_size, shuffle=shuffle)
+    train_faces_loader: DataLoader = DataLoader(celeb_train, sampler=train_sampler, batch_size=batch_size, num_workers=5)
+    valid_faces_loader: DataLoader = DataLoader(celeb_valid, batch_size=batch_size, shuffle=shuffle. num_workers=5)
 
     train_loaders: DataLoaderTuple = DataLoaderTuple(train_faces_loader, train_nonfaces_loader)
     valid_loaders: DataLoaderTuple = DataLoaderTuple(valid_faces_loader, valid_nonfaces_loader)
@@ -122,7 +122,7 @@ def make_eval_loader(
 
     # Concat and wrap with loader
     total_dataset = concat_datasets(pbb_dataset, imagenet_dataset, None)
-    data_loader = DataLoader(total_dataset, batch_size, shuffle=True)
+    data_loader = DataLoader(total_dataset, batch_size, shuffle=True, num_workers=5)
 
     return data_loader
 
