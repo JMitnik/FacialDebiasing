@@ -49,11 +49,11 @@ def eval_model(model, data_loader):
 
     with torch.no_grad():
         for i, batch in enumerate(data_loader):
-            print(f"batch:{i}")
+            # print(f"batch:{i}")
             images, labels, idxs = batch
             batch_size = labels.size(0)
 
-            print(f"size:{batch_size}")
+            # print(f"size:{batch_size}")
             images = images.to(DEVICE)
             labels = labels.to(DEVICE)
             idxs = idxs.to(DEVICE)
@@ -76,16 +76,24 @@ def eval_model(model, data_loader):
 
 def main():
 
-    eval_loader: DataLoader = make_eval_loader(batch_size=ARGS.batch_size, filter_exclude_skin_color=['lighter'])
-
+    skin_list = [[], ["Female"], ["Male"], ["Female"], ["Male"]]
+    gender_list = [[], ["lighter"], ["lighter"], ["darker"], ["darker"]]
+    name_list = ["all", "dark man", "dark female", "light man", "light female"]
+    
+    
     # Load model
     model = vae_model.Db_vae(z_dim=ARGS.zdim, device=DEVICE).to(DEVICE)
     model.load_state_dict(torch.load(f"results/{ARGS.adress}/model.pt"))
     model.eval()
 
-    loss, acc = eval_model(model, eval_loader)
+    for i in range(5):
+        print(skin_list[i])
+        print(gender_list[i])
+        eval_loader: DataLoader = make_eval_loader(batch_size=ARGS.batch_size, filter_exclude_skin_color=skin_list[i], filter_exclude_gender=gender_list[i])
 
-    print(f"loss:{loss}, acc:{acc}")
+        loss, acc = eval_model(model, eval_loader)
+
+        print(f"{name_list[i]} => loss:{loss}, acc:{acc}")
 
     # print_reconstruction(model, valid_data, epoch)
 
@@ -96,7 +104,7 @@ if __name__ == "__main__":
     print("start evaluation")
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', default=128, type=int,
+    parser.add_argument('--batch_size', default=256, type=int,
                         help='dimensionality of latent space')
     
     parser.add_argument('--zdim', default=20, type=int,
