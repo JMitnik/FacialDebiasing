@@ -5,13 +5,15 @@ In this file the training of the network is done
 import torch
 import torch.functional as F
 import numpy as np
+from typing import Tuple
+from torch.utils.data.sampler import SequentialSampler
 import datetime
 
 import vae_model
 import argparse
 from setup import config
 from torch.utils.data import ConcatDataset, DataLoader
-from datasets import train_and_valid_loaders, sample_dataset, sample_idxs_from_loader
+from datasets import DataLoaderTuple, concat_datasets, train_and_valid_loaders, sample_dataset, sample_idxs_from_loader, make_hist_loader
 
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
@@ -77,7 +79,7 @@ def get_best_and_worst(labels, pred):
 
 def visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other, n_rows=4):
     n_samples = n_rows**2
-    
+
     fig=plt.figure(figsize=(16, 16))
 
     sub_titles = ["Best faces", "Worst faces", "Best non-faces", "Worst non-faces"]
@@ -157,6 +159,14 @@ def visualize_bias(probs, data_loader, all_labels, all_index, epoch, n_rows=3):
     fig.savefig('results/{}/bias_probs/epoch={}'.format(FOLDER_NAME, epoch), bbox_inches='tight')
     plt.close()
 
+def concat_batches(batch_a, batch_b):
+    # TODO: Merge by interleaving the batches
+    images = torch.cat((batch_a[0], batch_b[0]), 0)
+    labels = torch.cat((batch_a[1], batch_b[1]), 0)
+    idxs = torch.cat((batch_a[2], batch_b[2]), 0)
+
+    return images, labels, idxs
+
 def update_histogram(model, data_loader, epoch):
 
     # reset the means and histograms
@@ -183,23 +193,33 @@ def update_histogram(model, data_loader, epoch):
             probs = model.get_histo_base()
         elif ARGS.debias_type == "our":
             probs = model.get_histo_our()
-        else:
-            print("please give correct debias type")
+        
+        if probs is None:
+            raise Exception("No coorrect debias method given. choos \"base\" or \"our\"")
+
 
     visualize_bias(probs, data_loader, all_labels, all_index, epoch)
 
-def train_epoch(model, data_loader, optimizer):
+    return probs
+
+def train_epoch(model, data_loaders: DataLoaderTuple, optimizer):
     """
     train the model for one epoch
     """
+
+    face_loader, nonface_loader = data_loaders
 
     model.train()
     avg_loss = 0
     avg_acc = 0
 
-    print("START TRAINING")
-    for i, batch in enumerate(data_loader):
-        images, labels, index = batch
+    # The batches contain Image(rgb x w x h), Labels (1 for 0), original dataset indices
+    face_batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+    nonface_batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+
+    # TODO: divide the batch-size of the loader over both face_Batch and nonface_batch, rather than doubling the batch-size
+    for i, (face_batch, nonface_batch) in enumerate(zip(face_loader, nonface_loader)):
+        images, labels, idxs = concat_batches(face_batch, nonface_batch)
         batch_size = labels.size(0)
 
         images, labels = images.to(DEVICE), labels.to(DEVICE)
@@ -225,11 +245,11 @@ def train_epoch(model, data_loader, optimizer):
 
     return avg_loss/(i+1), avg_acc/(i+1)
 
-
-def eval_epoch(model, data_loader, epoch):
+def eval_epoch(model, data_loaders: DataLoaderTuple, epoch):
     """
     Calculates the validation error of the model
     """
+    face_loader, nonface_loader = data_loaders
 
     model.eval()
     avg_loss = 0
@@ -237,16 +257,16 @@ def eval_epoch(model, data_loader, epoch):
 
     all_labels = torch.LongTensor([]).to(DEVICE)
     all_preds = torch.Tensor([]).to(DEVICE)
-    all_indeces = torch.LongTensor([]).to(DEVICE)
+    all_idxs = torch.LongTensor([]).to(DEVICE)
 
     with torch.no_grad():
-        for i, batch in enumerate(data_loader):
-            images, labels, index = batch
+        for i, (face_batch, nonface_batch) in enumerate(zip(face_loader, nonface_loader)):
+            images, labels, idxs = concat_batches(face_batch, nonface_batch)
             batch_size = labels.size(0)
 
             images = images.to(DEVICE)
             labels = labels.to(DEVICE)
-            index = index.to(DEVICE)
+            idxs = idxs.to(DEVICE)
             pred, loss = model.forward(images, labels)
 
             loss = loss/batch_size
@@ -257,38 +277,50 @@ def eval_epoch(model, data_loader, epoch):
 
             all_labels = torch.cat((all_labels, labels))
             all_preds = torch.cat((all_preds, pred))
-            all_indeces = torch.cat((all_indeces, index))
-        
+            all_idxs = torch.cat((all_idxs, idxs))
 
-    print("length of all eval:", len(all_labels))
+
     best_faces, worst_faces, best_other, worst_other = get_best_and_worst(all_labels, all_preds)
-
-    visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other)
+    visualize_best_and_worst(data_loaders, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other)
+    
     return avg_loss/(i+1), avg_acc/(i+1)
 
 def main():
-    # import data
-    train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size,
-                                                                                 train_size=0.8, max_images=ARGS.dataset_size)
+    train_loaders: DataLoaderTuple
+    valid_loaders: DataLoaderTuple
 
-    # create model
+    train_loaders, valid_loaders = train_and_valid_loaders(
+        batch_size=ARGS.batch_size,
+        train_size=0.8,
+        max_images=ARGS.dataset_size
+    )
+
+    # Initialize model
     model = vae_model.Db_vae(z_dim=ARGS.zdim, device=DEVICE).to(DEVICE)
 
-    # create optimizer
+    # Initialize optimizer
     optimizer = torch.optim.Adam(model.parameters())
 
     for epoch in range(ARGS.epochs):
-        print("Starting epoch:{}/{}".format(epoch, ARGS.epochs))
-        if ARGS.debias_type != 'none':
-            update_histogram(model, train_loader, epoch)
+        # Generic sequential dataloader to sample histogram
 
-        train_loss, train_acc = train_epoch(model, train_loader, optimizer)
+        print("Starting epoch:{}/{}".format(epoch, ARGS.epochs))
+
+        if ARGS.debias_type != 'none':
+            hist_loader = make_hist_loader(train_loaders.faces.dataset, ARGS.batch_size)
+            hist = update_histogram(model, hist_loader, epoch)
+
+            train_loaders.faces.sampler.weights = hist
+
+
+        train_loss, train_acc = train_epoch(model, train_loaders, optimizer)
         print("training done")
-        val_loss, val_acc = eval_epoch(model, valid_loader, epoch)
+        val_loss, val_acc = eval_epoch(model, valid_loaders, epoch)
 
         print("epoch {}/{}, train_loss={:.2f}, train_acc={:.2f}, val_loss={:.2f}, val_acc={:.2f}".format(epoch+1,
                                     ARGS.epochs, train_loss, train_acc, val_loss, val_acc))
 
+        valid_data = concat_datasets(*valid_loaders, proportion_a=0.5)
         print_reconstruction(model, valid_data, epoch)
 
         with open("results/"+FOLDER_NAME + "/training_results.csv", "a") as write_file:
