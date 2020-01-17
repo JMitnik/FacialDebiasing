@@ -60,7 +60,7 @@ def eval_model(model, data_loader):
             pred, loss = model.forward(images, labels)
 
             loss = loss/batch_size
-            
+
 
             avg_loss += loss.item()
 
@@ -79,8 +79,8 @@ def main():
     skin_list = [[], ["Female"], ["Male"], ["Female"], ["Male"]]
     gender_list = [[], ["lighter"], ["lighter"], ["darker"], ["darker"]]
     name_list = ["all", "dark man", "dark female", "light man", "light female"]
-    
-    
+
+
     # Load model
     model = vae_model.Db_vae(z_dim=ARGS.zdim, device=DEVICE).to(DEVICE)
     model.load_state_dict(torch.load(f"results/{ARGS.adress}/model.pt"))
@@ -97,8 +97,7 @@ def main():
 
     # print_reconstruction(model, valid_data, epoch)
 
-
-    return 
+    return
 
 if __name__ == "__main__":
     print("start evaluation")
@@ -106,7 +105,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch_size', default=256, type=int,
                         help='dimensionality of latent space')
-    
     parser.add_argument('--zdim', default=20, type=int,
                         help='dimensionality of latent space')
     parser.add_argument("--adress", required=True, type=str)
