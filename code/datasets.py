@@ -161,7 +161,6 @@ def train_and_valid_loaders(
 def sample_dataset(dataset: Dataset, nr_samples: int):
     max_nr_items: int = min(nr_samples, len(dataset))
     idxs = np.random.permutation(np.arange(len(dataset)))[:max_nr_items]
-    print(idxs)
 
     return torch.stack([dataset[idx][0] for idx in idxs])
 
