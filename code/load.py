@@ -1,12 +1,13 @@
 # %%
+from torch.utils.data.dataloader import DataLoader
 from setup import config
-from torch.utils.data import ConcatDataset, DataLoader
-from datasets import train_and_valid_loaders, sample_dataset
+from dataset import make_eval_loader
 
-sample_train_loader, sample_valid_loader, sample_train_dataset, sample_valid_dataset = train_and_valid_loaders(2, max_images=100)
 
-# %%
-next(enumerate(sample_train_loader))[1]
+eval_set: DataLoader = make_eval_loader(
+    filter_exclude_country=['Senegal']
+)
+
 
 
 # %%
