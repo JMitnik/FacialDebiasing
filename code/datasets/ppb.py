@@ -15,7 +15,7 @@ from torch import float64
 
 from .generic import CountryEnum, SkinColorEnum, default_transform, DataLabel, GenderEnum
 
-class PBBDataset(TorchDataset):
+class PPBDataset(TorchDataset):
     def __init__(
         self,
         path_to_images: str,
@@ -49,7 +49,7 @@ class PBBDataset(TorchDataset):
 
         return result
 
-    def __getitem__(self, idx: int):k
+    def __getitem__(self, idx: int):
         img: Image = Image.open(os.path.join(self.path_to_images,
                                 self.df_metadata.iloc[idx].filename))
 

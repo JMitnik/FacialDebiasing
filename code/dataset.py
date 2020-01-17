@@ -9,7 +9,7 @@ from typing import Optional, List, NamedTuple, Union
 from datasets.generic import CountryEnum, DataLoaderTuple, GenderEnum, SkinColorEnum
 from datasets.celeb_a import CelebDataset
 from datasets.imagenet import ImagenetDataset
-from datasets.pbb import PBBDataset
+from datasets.ppb import PPBDataset
 
 def split_dataset(dataset, train_size: float, max_images: Optional[int] = None):
     # Shuffle indices of the dataset
