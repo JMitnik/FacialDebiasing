@@ -179,7 +179,7 @@ def update_histogram(model, data_loader, epoch):
     with torch.no_grad():
         for i, batch in enumerate(data_loader):
             images, labels, index = batch
-            
+
             #TEMPORARY TAKE ONLY FACES
             slicer = labels == 1
             images, labels, index = images[slicer].to(DEVICE), labels[slicer].to(DEVICE), index[slicer].to(DEVICE)
@@ -193,10 +193,9 @@ def update_histogram(model, data_loader, epoch):
             probs = model.get_histo_base()
         elif ARGS.debias_type == "our":
             probs = model.get_histo_our()
-        
+
         if probs is None:
             raise Exception("No coorrect debias method given. choos \"base\" or \"our\"")
-
 
     visualize_bias(probs, data_loader, all_labels, all_index, epoch)
 
@@ -281,8 +280,8 @@ def eval_epoch(model, data_loaders: DataLoaderTuple, epoch):
 
 
     best_faces, worst_faces, best_other, worst_other = get_best_and_worst(all_labels, all_preds)
-    visualize_best_and_worst(data_loaders, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other)
-    
+    visualize_best_and_worst(data_loaders, all_labels, all_idxs, epoch, best_faces, worst_faces, best_other, worst_other)
+
     return avg_loss/(i+1), avg_acc/(i+1)
 
 def main():
@@ -313,7 +312,7 @@ def main():
             train_loaders.faces.sampler.weights = hist
 
 
-        train_loss, train_acc = train_epoch(model, train_loaders, optimizer)
+        # train_loss, train_acc = train_epoch(model, train_loaders, optimizer)
         print("training done")
         val_loss, val_acc = eval_epoch(model, valid_loaders, epoch)
 
@@ -334,7 +333,7 @@ if __name__ == "__main__":
     print("start training")
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', default=128, type=int,
+    parser.add_argument('--batch_size', default=2, type=int,
                         help='size of batch')
     parser.add_argument('--epochs', default=10, type=int,
                         help='max number of epochs')
@@ -342,7 +341,7 @@ if __name__ == "__main__":
                         help='dimensionality of latent space')
     parser.add_argument('--alpha', default=0.0, type=float,
                         help='importance of debiasing')
-    parser.add_argument('--dataset_size', default=-1, type=int,
+    parser.add_argument('--dataset_size', default=100, type=int,
                         help='total size of database')
     parser.add_argument('--eval_freq', default=5, type=int,
                         help='total size of database')
@@ -352,10 +351,10 @@ if __name__ == "__main__":
 
     ARGS = parser.parse_args()
 
-    print("ARGS => batch_size:{}, epochs:{}, z_dim:{}, alpha:{}, dataset_size:{}, eval_freq:{}, debiasing type:{}".format(ARGS.batch_size, 
+    print("ARGS => batch_size:{}, epochs:{}, z_dim:{}, alpha:{}, dataset_size:{}, eval_freq:{}, debiasing type:{}".format(ARGS.batch_size,
                                 ARGS.epochs, ARGS.zdim, ARGS.alpha, ARGS.dataset_size, ARGS.eval_freq, ARGS.debias_type))
 
-    FOLDER_NAME = "{}".format(datetime.datetime.now())
+    FOLDER_NAME = "{}".format(datetime.datetime.now().strftime("%H_%M_%S"))
 
     os.makedirs("results/"+ FOLDER_NAME + '/best_and_worst')
     os.makedirs("results/"+ FOLDER_NAME + '/bias_probs')
@@ -372,6 +371,6 @@ if __name__ == "__main__":
 
     with open("results/" + FOLDER_NAME + "/training_results.csv", "w") as write_file:
         write_file.write("epoch, train_loss, valid_loss, train_acc, valid_acc\n")
-    
+
 
     main()
