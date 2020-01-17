@@ -1,112 +1,15 @@
 import torch
-from torch.utils.data import Dataset as TorchDataset, ConcatDataset, DataLoader, Dataset, Sampler, WeightedRandomSampler, BatchSampler, SequentialSampler
+from torch.utils.data import ConcatDataset, DataLoader, Dataset, WeightedRandomSampler, BatchSampler, SequentialSampler
 from torch.utils.data.dataset import Subset
 from torch.utils.data.sampler import RandomSampler
-import torchvision.transforms as transforms
-from torchvision.datasets import ImageFolder
 from setup import config
-import os
 import numpy as np
-import pandas as pd
-from PIL import Image
-from typing import Callable, Optional, List, NamedTuple
-from enum import Enum
+from typing import Callable, Optional, List, NamedTuple, Union
 
-from torch import float64
-
-# Default transform
-default_transform = transforms.Compose([
-    transforms.Resize((64, 64)),
-    transforms.ToTensor()
-])
-
-class DataLoaderTuple(NamedTuple):
-    faces: DataLoader
-    nonfaces: DataLoader
-
-class DataLabel(Enum):
-    POSITIVE = 1
-    NEGATIVE = 0
-
-class CelebDataset(TorchDataset):
-    """Dataset for CelebA"""
-
-    def __init__(self, path_to_images: str, path_to_bbox: str, transform: Callable = default_transform):
-        self.df_images: pd.DataFrame = pd.read_table(path_to_bbox, delim_whitespace=True)
-        self.path_to_images: str = path_to_images
-        self.transform = transform
-
-    def __getitem__(self, idx: int):
-        """Retrieves the cropped images and resizes them to dimensions (64, 64)
-
-        Arguments:
-            index
-
-        Returns:
-            (tensor, int) -- Image and class
-        """
-        img: Image = Image.open(os.path.join(self.path_to_images,
-                                      self.df_images.iloc[idx].image_id))
-
-        img = self.transform(img)
-        label: int = DataLabel.POSITIVE.value
-
-        return img, label, idx
-
-    def sample(self, amount: int):
-        max_idx: int = len(self)
-        idxs: np.array = np.random.choice(np.linspace(0, max_idx - 1), amount)
-
-        return [self.__getitem__(idx) for idx in idxs]
-
-    def __len__(self):
-        return len(self.df_images)
-
-class ImagenetDataset(ImageFolder):
-    def __init__(self, path_to_images: str, transform: Callable = default_transform):
-        super().__init__(path_to_images, transform)
-
-    def __getitem__(self, idx: int):
-        # Override label with negative
-        img, _ = super().__getitem__(idx)
-        return (img, DataLabel.NEGATIVE.value, idx)
-
-    def sample(self, amount: int):
-        max_idx: int = len(self)
-        idxs: np.array = np.random.choice(np.linspace(0, max_idx - 1), amount)
-
-        return [self.__getitem__(idx) for idx in idxs]
-
-class PBBDataset(TorchDataset):
-    def __init__(
-        self,
-        path_to_images: str,
-        path_to_metadata: str,
-        filter_excl_gender: List[str] = [],
-        filter_excl_country: List[str] = []
-    ):
-        self.path_to_images: str = path_to_images
-        self.path_to_metadata: str = path_to_metadata
-        self.filter_excl_gender: List[str] = filter_excl_gender
-        self.filter_excl_country: List[str] = filter_excl_country
-
-        self.df_metadata = self._apply_filters_to_metadata(pd.read_csv(self.path_to_metadata))
-
-    def _apply_filters_to_metadata(self, df: pd.DataFrame):
-        result = df
-
-        if len(self.filter_excl_country):
-            result = result.query('countries not in @self.filter_excl_country')
-
-        if len(self.filter_excl_gender):
-            result = result.query('gender not in @self.filter_excl_gender')
-
-        return result
-
-    def __getitem__(self, idx: int):
-        img: Image = Image.open(os.path.join(self.path_to_images,
-                                self.df_metadata.iloc[idx].))
-
+from datasets.generic import CountryEnum, DataLoaderTuple, GenderEnum, SkinColorEnum
+from datasets.celeb_a import CelebDataset
+from datasets.imagenet import ImagenetDataset
+from datasets.pbb import PBBDataset
 
 def split_dataset(dataset, train_size: float, max_images: Optional[int] = None):
     # Shuffle indices of the dataset
@@ -141,7 +44,7 @@ def concat_datasets(dataset_a, dataset_b, proportion_a):
 
     return ConcatDataset([sampled_dataset_a, sampled_dataset_b])
 
-def train_and_valid_loaders(
+def make_train_and_valid_loaders(
     batch_size: int,
     max_images: int,
     shuffle: bool = True,
@@ -165,7 +68,7 @@ def train_and_valid_loaders(
     valid_nonfaces_loader: DataLoader = DataLoader(imagenet_valid, batch_size=batch_size, shuffle=False)
 
     # Init some weights
-    init_weights = torch.rand(len(celeb_train))
+    init_weights = torch.rand(len(celeb_train)).tolist()
 
     # Debugging: Uncomment to see that item at index 9 occurs more oftne
     # ❗ Important: Note that the indices dont have to be below 1
@@ -188,6 +91,32 @@ def train_and_valid_loaders(
     valid_loaders: DataLoaderTuple = DataLoaderTuple(valid_faces_loader, valid_nonfaces_loader)
 
     return train_loaders, valid_loaders
+
+def make_eval_loader(
+    self,
+    filter_exclude_gender: List[Union[GenderEnum, str]] = [],
+    filter_exclude_country: List[Union[CountryEnum, str]] = [],
+    filter_exclude_skin_color: List[Union[SkinColorEnum, str]] = [],
+    proportion_faces: float = 0.5,
+    batch_size: int = 16
+):
+    PBB_dataset = PBBDataset(
+        path_to_images=config.path_to_eval_face_images,
+        path_to_metadata=config.path_to_eval_metadata,
+        filter_excl_country=filter_exclude_country,
+        filter_excl_gender=filter_exclude_gender,
+        filter_excl_skin_color=filter_exclude_skin_color
+    )
+
+    imagenet_dataset = ImagenetDataset(
+        path_to_images=config.path_to_eval_nonface_images
+    )
+
+    total_dataset = concat_datasets(PBBDataset, imagenet_dataset, proportion_faces)
+
+    data_loader = DataLoader(total_dataset, batch_size)
+
+    return data_loader
 
 def sample_dataset(dataset: Dataset, nr_samples: int):
     max_nr_items: int = min(nr_samples, len(dataset))

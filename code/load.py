@@ -1,12 +1,14 @@
 # %%
 from setup import config
-from torch.utils.data import ConcatDataset, DataLoader
-from datasets import train_and_valid_loaders, sample_dataset
+from datasets import PBBDataset
 
-sample_train_loader, sample_valid_loader, sample_train_dataset, sample_valid_dataset = train_and_valid_loaders(2, max_images=100)
 
-# %%
-next(enumerate(sample_train_loader))[1]
+eval_set = PBBDataset(
+    path_to_images=config.path_to_eval_images,
+    path_to_metadata=config.path_to_eval_metadata,
+    filter_excl_country=['Senegal']
+)
 
+eval_set[20]
 
 # %%
