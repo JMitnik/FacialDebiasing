@@ -10,9 +10,9 @@ class Config(NamedTuple):
     # Random seed for reproducability
     random_seed: int = 0
     # Path to evaluation images (Faces)
-    path_to_eval_face_images: str = 'data/pbb/imgs'
+    path_to_eval_face_images: str = 'data/ppb/imgs'
     # Path to evaluation metadata
-    path_to_eval_metadata: str = 'data/pbb/PPB-2017-metadata.csv'
+    path_to_eval_metadata: str = 'data/ppb/PPB-2017-metadata.csv'
     # Path to evaluation images (Nonfaces such as Imagenet)
     path_to_eval_nonface_images: str = 'data/eval_imagenet'
 
