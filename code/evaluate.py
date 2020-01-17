@@ -68,7 +68,10 @@ def eval_model(model, data_loader):
             all_preds = torch.cat((all_preds, pred))
             all_idxs = torch.cat((all_idxs, idxs))
 
+    print(f"Amount of labels:{len(all_labels)}, Amount of faces:{all_labels.sum()}")
     acc = calculate_accuracy(all_labels, all_preds)
+
+
     # best_faces, worst_faces, best_other, worst_other = get_best_and_worst(all_labels, all_preds)
     # visualize_best_and_worst(data_loaders, all_labels, all_idxs, epoch, best_faces, worst_faces, best_other, worst_other)
 
@@ -76,8 +79,8 @@ def eval_model(model, data_loader):
 
 def main():
 
-    skin_list = [[], ["Female"], ["Male"], ["Female"], ["Male"]]
-    gender_list = [[], ["lighter"], ["lighter"], ["darker"], ["darker"]]
+    gender_list = [[], ["Female"], ["Male"], ["Female"], ["Male"]]
+    skin_list = [[], ["lighter"], ["lighter"], ["darker"], ["darker"]]
     name_list = ["all", "dark man", "dark female", "light man", "light female"]
     
     
@@ -87,8 +90,6 @@ def main():
     model.eval()
 
     for i in range(5):
-        print(skin_list[i])
-        print(gender_list[i])
         eval_loader: DataLoader = make_eval_loader(batch_size=ARGS.batch_size, filter_exclude_skin_color=skin_list[i], filter_exclude_gender=gender_list[i])
 
         loss, acc = eval_model(model, eval_loader)
