@@ -75,16 +75,14 @@ def get_best_and_worst(labels, pred):
 
     return best_faces, worst_faces, best_other, worst_other
 
-def visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other):
-    n_rows = 4
+def visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other, n_rows=4):
     n_samples = n_rows**2
     
     fig=plt.figure(figsize=(16, 16))
 
     sub_titles = ["Best faces", "Worst faces", "Best non-faces", "Worst non-faces"]
-    for i, indeces in enumerate([best_faces, worst_faces, best_other, worst_other]):
-        labels = all_labels[indeces]
-        indeces = all_indeces[indeces]
+    for i, indeces in enumerate((best_faces, worst_faces, best_other, worst_other)):
+        labels, indeces = all_labels[indeces], all_indeces[indeces]
 
         images = sample_idxs_from_loader(indeces, data_loader, labels[0])
 
@@ -99,8 +97,6 @@ def visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_f
     fig.savefig('results/{}/best_and_worst/epoch:{}'.format(FOLDER_NAME,epoch), bbox_inches='tight')
 
     plt.close()
-    
-    return
 
 def debug_memory():
     tensors = Counter(
@@ -111,17 +107,15 @@ def debug_memory():
     for line in tensors.items():
         print('{}\t{}'.format(*line))
 
-def print_reconstruction(model, data, epoch):
+def print_reconstruction(model, data, epoch, n_rows=4):
     model.eval()
-    ######### RECON IMAGES ###########
-    n_rows = 4
     n_samples = n_rows**2
 
     images = sample_dataset(data, n_samples).to(DEVICE)
 
-    fig=plt.figure(figsize=(16, 8))
-
     recon_images = model.recon_images(images)
+
+    fig=plt.figure(figsize=(16, 8))
 
     fig.add_subplot(1, 2, 1)
     grid = make_grid(images.reshape(n_samples,3,64,64), n_rows)
@@ -138,9 +132,37 @@ def print_reconstruction(model, data, epoch):
     fig.savefig('results/{}/reconstructions/epoch={}'.format(FOLDER_NAME, epoch), bbox_inches='tight')
 
     plt.close()
-    return
+
+def visualize_bias(probs, data_loader, all_labels, all_index, epoch, n_rows=3):
+    n_samples = n_rows**2
+
+    highest_probs = probs.argsort(descending=True)[:n_samples]
+    lowest_probs = probs.argsort()[:n_samples]
+
+    highest_imgs = sample_idxs_from_loader(all_index[highest_probs], data_loader, 1)
+    worst_imgs = sample_idxs_from_loader(all_index[lowest_probs], data_loader, 1)
+
+    img_list = (highest_imgs, worst_imgs)
+    titles = ("Highest", "Lowest")
+    fig = plt.figure(figsize=(16, 16))
+
+    for i in range(2):
+        ax = fig.add_subplot(1, 2, i+1)
+        grid = make_grid(img_list[i].reshape(n_samples,3,64,64), n_rows)
+        plt.imshow(grid.permute(1,2,0).cpu())
+        ax.set_title(titles[i], fontdict={"fontsize":30})
+
+        remove_frame(plt)
+
+    fig.savefig('results/{}/bias_probs/epoch={}'.format(FOLDER_NAME, epoch), bbox_inches='tight')
+    plt.close()
 
 def update_histogram(model, data_loader, epoch):
+
+    # reset the means and histograms
+    model.hist = torch.ones((ARGS.zdim, model.num_bins)).to(DEVICE)
+    model.means = torch.Tensor().to(DEVICE)
+
     all_labels = torch.LongTensor([]).to(DEVICE)
     all_index = torch.LongTensor([]).to(DEVICE)
 
@@ -150,59 +172,21 @@ def update_histogram(model, data_loader, epoch):
             
             #TEMPORARY TAKE ONLY FACES
             slicer = labels == 1
-            images, labels, index = images[slicer], labels[slicer], index[slicer]
-
-
+            images, labels, index = images[slicer].to(DEVICE), labels[slicer].to(DEVICE), index[slicer].to(DEVICE)
             batch_size = labels.size(0)
-
-            images = images.to(DEVICE)
-            labels = labels.to(DEVICE)
-            index = index.to(DEVICE)
 
             all_labels = torch.cat((all_labels, labels))
             all_index = torch.cat((all_index, index))
             model.build_histo(images)
 
-        base = model.get_histo_base()
-        our = model.get_histo()
-        difference = base-our
+        if ARGS.debias_type == "base":
+            probs = model.get_histo_base()
+        elif ARGS.debias_type == "our":
+            probs = model.get_histo_our()
+        else:
+            print("please give correct debias type")
 
-    n_rows = 3
-    n_samples = n_rows**2
-
-    best_base = base.argsort(descending=True)[:n_samples]
-    best_our = our.argsort(descending=True)[:n_samples]
-    worst_base = base.argsort()[:n_samples]
-    worst_our = our.argsort()[:n_samples]
-
-    print("best => base:{}, our:{}".format(best_base, best_our))
-
-    print(all_index[best_base])
-    print(all_labels[best_base])
-
-    best_img_base = sample_idxs_from_loader(all_index[best_base], data_loader, 1)
-    best_img_our = sample_idxs_from_loader(all_index[best_our], data_loader, 1)
-    worst_img_base = sample_idxs_from_loader(all_index[worst_base], data_loader, 1)
-    worst_img_our = sample_idxs_from_loader(all_index[worst_our], data_loader, 1)
-
-    img_list = (best_img_base, best_img_our, worst_img_base, worst_img_our)
-    titles = ("best base", "best our", "worst base", "worst our")
-    fig=plt.figure(figsize=(16, 16))
-
-    for i in range(4):
-        ax = fig.add_subplot(2, 2, i+1)
-        grid = make_grid(img_list[i].reshape(n_samples,3,64,64), n_rows)
-        plt.imshow(grid.permute(1,2,0).cpu())
-        ax.set_title(titles[i], fontdict={"fontsize":30})
-
-        remove_frame(plt)
-
-    fig.savefig('results/{}/base_vs_our/epoch={}'.format(FOLDER_NAME, epoch), bbox_inches='tight')
-    print("DONE WITH UPDATE")
-
-    plt.close()
-    return
-
+    visualize_bias(probs, data_loader, all_labels, all_index, epoch)
 
 def train_epoch(model, data_loader, optimizer):
     """
@@ -218,14 +202,13 @@ def train_epoch(model, data_loader, optimizer):
         images, labels, index = batch
         batch_size = labels.size(0)
 
-        # print("TRAIN => BATCH SIZE:", batch_size)
-
-        images = images.to(DEVICE)
-        labels = labels.to(DEVICE)
+        images, labels = images.to(DEVICE), labels.to(DEVICE)
         pred, loss = model.forward(images, labels)
 
         optimizer.zero_grad()
         loss = loss/batch_size
+
+        # calculate the gradients and clip them at 5
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5)
 
@@ -234,8 +217,6 @@ def train_epoch(model, data_loader, optimizer):
         acc = calculate_accuracy(labels, pred)
         avg_loss += loss.item()
         avg_acc += acc
-
-        # print_best_and_worst(images, labels, pred, 123)
 
         if i % ARGS.eval_freq == 0:
             print("batch:{} accuracy:{}".format(i, acc))
@@ -280,9 +261,9 @@ def eval_epoch(model, data_loader, epoch):
         
 
     print("length of all eval:", len(all_labels))
-    # best_faces, worst_faces, best_other, worst_other = get_best_and_worst(all_labels, all_preds)
+    best_faces, worst_faces, best_other, worst_other = get_best_and_worst(all_labels, all_preds)
 
-    # visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other)
+    visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other)
     return avg_loss/(i+1), avg_acc/(i+1)
 
 def main():
@@ -298,12 +279,14 @@ def main():
 
     for epoch in range(ARGS.epochs):
         print("Starting epoch:{}/{}".format(epoch, ARGS.epochs))
-        update_histogram(model, train_loader, epoch)
+        if ARGS.debias_type != 'none':
+            update_histogram(model, train_loader, epoch)
+
         train_loss, train_acc = train_epoch(model, train_loader, optimizer)
         print("training done")
         val_loss, val_acc = eval_epoch(model, valid_loader, epoch)
 
-        print("epoch {}/{}, train_loss={:.2f}, train_acc={:.2f}, val_loss={:.2f}, val_acc={:.2f}".format(epoch,
+        print("epoch {}/{}, train_loss={:.2f}, train_acc={:.2f}, val_loss={:.2f}, val_acc={:.2f}".format(epoch+1,
                                     ARGS.epochs, train_loss, train_acc, val_loss, val_acc))
 
         print_reconstruction(model, valid_data, epoch)
@@ -314,7 +297,6 @@ def main():
             write_file.write(s)
 
         torch.save(model.state_dict(), "results/"+FOLDER_NAME+"/model.pt".format(epoch))
-    return
 
 if __name__ == "__main__":
     print("start training")
@@ -332,19 +314,29 @@ if __name__ == "__main__":
                         help='total size of database')
     parser.add_argument('--eval_freq', default=5, type=int,
                         help='total size of database')
+    parser.add_argument('--debias_type', default='none', type=str,
+                        help='type of debiasing used')
 
 
     ARGS = parser.parse_args()
 
-    print("ARGS => batch_size:{}, epochs:{}, z_dim:{}, alpha:{}, dataset_size:{}, eval_freq:{}".format(ARGS.batch_size, 
-                                ARGS.epochs, ARGS.zdim, ARGS.alpha, ARGS.dataset_size, ARGS.eval_freq))
+    print("ARGS => batch_size:{}, epochs:{}, z_dim:{}, alpha:{}, dataset_size:{}, eval_freq:{}, debiasing type:{}".format(ARGS.batch_size, 
+                                ARGS.epochs, ARGS.zdim, ARGS.alpha, ARGS.dataset_size, ARGS.eval_freq, ARGS.debias_type))
 
-    FOLDER_NAME = "results_zdim_{}_alpha_{}_batch_size_{}_size_{}_time_{}".format(ARGS.zdim, str(ARGS.alpha)[2:], 
-                                ARGS.batch_size, ARGS.dataset_size, datetime.datetime.now())
+    FOLDER_NAME = "{}".format(datetime.datetime.now())
 
     os.makedirs("results/"+ FOLDER_NAME + '/best_and_worst')
-    os.makedirs("results/"+ FOLDER_NAME + '/base_vs_our')
+    os.makedirs("results/"+ FOLDER_NAME + '/bias_probs')
     os.makedirs("results/"+ FOLDER_NAME + '/reconstructions')
+
+    with open("results/" + FOLDER_NAME + "/flags.txt", "w") as write_file:
+        write_file.write(f"zdim = {ARGS.zdim}\n")
+        write_file.write(f"alpha = {ARGS.alpha}\n")
+        write_file.write(f"epochs = {ARGS.epochs}\n")
+        write_file.write(f"batch size = {ARGS.batch_size}\n")
+        write_file.write(f"eval frequency = {ARGS.eval_freq}\n")
+        write_file.write(f"dataset size = {ARGS.dataset_size}\n")
+        write_file.write(f"debiasing type = {ARGS.debias_type}\n")
 
     with open("results/" + FOLDER_NAME + "/training_results.csv", "w") as write_file:
         write_file.write("epoch, train_loss, valid_loss, train_acc, valid_acc\n")

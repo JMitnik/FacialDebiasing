@@ -134,8 +134,9 @@ class Db_vae(nn.Module):
         self.num_bins = 500
         self.min_val = -15
         self.max_val = 15
-        self.hist = torch.ones((z_dim, self.num_bins)).to(device)
-        self.means = torch.Tensor().to(self.device).to(device)
+        
+        self.hist = torch.ones((z_dim, self.num_bins)).to(self.device)
+        self.means = torch.Tensor().to(self.device)
         
         self.alpha = alpha
 
@@ -194,6 +195,12 @@ class Db_vae(nn.Module):
         _, mean_2, std_2 = self.encoder(img_2.reshape(1,3,64,64))
 
 
+    def build_means(self, input):
+        _, mean, log_std = self.encoder(input)
+
+        self.means = torch.cat((self.means, mean))
+
+        return
 
 
     def build_histo(self, input):
@@ -250,7 +257,7 @@ class Db_vae(nn.Module):
 
         return probs
 
-    def get_histo(self):
+    def get_histo_our(self):
         """
             Returns the probabilities given the means given the histo values
         """
