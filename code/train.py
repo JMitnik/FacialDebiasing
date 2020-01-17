@@ -320,8 +320,6 @@ def main():
         hist = update_histogram(model, hist_loader, epoch)
 
         train_loaders.faces.sampler.weights = hist
-        train_loaders.faces.sampler.weights[9] = 50
-
 
         print("Starting epoch:{}/{}".format(epoch, ARGS.epochs))
         train_error, train_acc = train_epoch(model, train_loaders, optimizer)
