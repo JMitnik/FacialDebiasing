@@ -311,13 +311,12 @@ def main():
 
             train_loaders.faces.sampler.weights = hist
 
-
-        # train_loss, train_acc = train_epoch(model, train_loaders, optimizer)
+        train_loss, train_acc = train_epoch(model, train_loaders, optimizer)
         print("training done")
         val_loss, val_acc = eval_epoch(model, valid_loaders, epoch)
 
-        # print("epoch {}/{}, train_loss={:.2f}, train_acc={:.2f}, val_loss={:.2f}, val_acc={:.2f}".format(epoch+1,
-        #                             ARGS.epochs, train_loss, train_acc, val_loss, val_acc))
+        print("epoch {}/{}, train_loss={:.2f}, train_acc={:.2f}, val_loss={:.2f}, val_acc={:.2f}".format(epoch+1,
+                                    ARGS.epochs, train_loss, train_acc, val_loss, val_acc))
 
         valid_data = concat_datasets(valid_loaders.faces.dataset, valid_loaders.nonfaces.dataset, proportion_a=0.5)
         print(valid_data)
@@ -334,7 +333,7 @@ if __name__ == "__main__":
     print("start training")
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', default=2, type=int,
+    parser.add_argument('--batch_size', default=256, type=int,
                         help='size of batch')
     parser.add_argument('--epochs', default=10, type=int,
                         help='max number of epochs')
@@ -342,7 +341,7 @@ if __name__ == "__main__":
                         help='dimensionality of latent space')
     parser.add_argument('--alpha', default=0.0, type=float,
                         help='importance of debiasing')
-    parser.add_argument('--dataset_size', default=100, type=int,
+    parser.add_argument('--dataset_size', default=-1, type=int,
                         help='total size of database')
     parser.add_argument('--eval_freq', default=5, type=int,
                         help='total size of database')
