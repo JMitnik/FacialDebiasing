@@ -9,7 +9,7 @@ import os
 import numpy as np
 import pandas as pd
 from PIL import Image
-from typing import Callable, Optional, Tuple, NamedTuple
+from typing import Callable, Optional, List, NamedTuple
 from enum import Enum
 
 from torch import float64
@@ -76,6 +76,37 @@ class ImagenetDataset(ImageFolder):
         idxs: np.array = np.random.choice(np.linspace(0, max_idx - 1), amount)
 
         return [self.__getitem__(idx) for idx in idxs]
+
+class PBBDataset(TorchDataset):
+    def __init__(
+        self,
+        path_to_images: str,
+        path_to_metadata: str,
+        filter_excl_gender: List[str] = [],
+        filter_excl_country: List[str] = []
+    ):
+        self.path_to_images: str = path_to_images
+        self.path_to_metadata: str = path_to_metadata
+        self.filter_excl_gender: List[str] = filter_excl_gender
+        self.filter_excl_country: List[str] = filter_excl_country
+
+        self.df_metadata = self._apply_filters_to_metadata(pd.read_csv(self.path_to_metadata))
+
+    def _apply_filters_to_metadata(self, df: pd.DataFrame):
+        result = df
+
+        if len(self.filter_excl_country):
+            result = result.query('countries not in @self.filter_excl_country')
+
+        if len(self.filter_excl_gender):
+            result = result.query('gender not in @self.filter_excl_gender')
+
+        return result
+
+    def __getitem__(self, idx: int):
+        img: Image = Image.open(os.path.join(self.path_to_images,
+                                self.df_metadata.iloc[idx].))
+
 
 def split_dataset(dataset, train_size: float, max_images: Optional[int] = None):
     # Shuffle indices of the dataset
