@@ -13,7 +13,8 @@ import vae_model
 import argparse
 from setup import config
 from torch.utils.data import ConcatDataset, DataLoader
-from datasets import DataLoaderTuple, concat_datasets, train_and_valid_loaders, sample_dataset, sample_idxs_from_loader, make_hist_loader
+from dataset import concat_datasets, make_train_and_valid_loaders, sample_dataset, sample_idxs_from_loader, make_hist_loader
+from datasets.generic import DataLoaderTuple
 
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
@@ -302,7 +303,7 @@ def main():
     train_loaders: DataLoaderTuple
     valid_loaders: DataLoaderTuple
 
-    train_loaders, valid_loaders = train_and_valid_loaders(
+    train_loaders, valid_loaders = make_train_and_valid_loaders(
         batch_size=ARGS.batch_size,
         train_size=0.8,
         max_images=ARGS.dataset_size
@@ -349,7 +350,6 @@ if __name__ == "__main__":
                         help='total size of database')
     parser.add_argument('--eval_freq', default=5, type=int,
                         help='total size of database')
-
 
     ARGS = parser.parse_args()
 
