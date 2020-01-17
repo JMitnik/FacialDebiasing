@@ -113,7 +113,6 @@ def print_reconstruction(model, data, epoch, n_rows=4):
     model.eval()
     n_samples = n_rows**2
 
-    print(data)
     images = sample_dataset(data, n_samples).to(DEVICE)
 
     recon_images = model.recon_images(images)
