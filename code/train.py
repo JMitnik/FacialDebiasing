@@ -5,13 +5,15 @@ In this file the training of the network is done
 import torch
 import torch.functional as F
 import numpy as np
+from typing import Tuple
+from torch.utils.data.sampler import SequentialSampler
 import datetime
 
 import vae_model
 import argparse
 from setup import config
 from torch.utils.data import ConcatDataset, DataLoader
-from datasets import train_and_valid_loaders, sample_dataset, sample_idxs_from_loader
+from datasets import DataLoaderTuple, concat_datasets, train_and_valid_loaders, sample_dataset, sample_idxs_from_loader, make_hist_loader
 
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
@@ -22,6 +24,7 @@ import os
 
 FOLDER_NAME = "images_{}".format(datetime.datetime.now())
 os.makedirs("images/"+ FOLDER_NAME + '/best_and_worst')
+os.makedirs("images/"+ FOLDER_NAME + '/base_vs_our')
 os.makedirs("images/"+ FOLDER_NAME + '/reconstructions')
 
 
@@ -75,16 +78,16 @@ def get_best_and_worst(labels, pred):
 
     return best_faces, worst_faces, best_other, worst_other
 
-def visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other):
+def visualize_best_and_worst(data_loader, all_labels, all_idxs, epoch, best_faces, worst_faces, best_other, worst_other):
     n_rows = 4
     n_samples = n_rows**2
-    
+
     fig=plt.figure(figsize=(16, 16))
 
     sub_titles = ["Best faces", "Worst faces", "Best non-faces", "Worst non-faces"]
     for i, indeces in enumerate([best_faces, worst_faces, best_other, worst_other]):
         labels = all_labels[indeces]
-        indeces = all_indeces[indeces]
+        indeces = all_idxs[indeces]
 
         images = sample_idxs_from_loader(indeces, data_loader, labels[0])
 
@@ -99,7 +102,7 @@ def visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_f
     fig.savefig('images/{}/best_and_worst/epoch:{}'.format(FOLDER_NAME,epoch), bbox_inches='tight')
 
     plt.close()
-    
+
     return
 
 def debug_memory():
@@ -140,21 +143,97 @@ def print_reconstruction(model, data, epoch):
     plt.close()
     return
 
-def train_epoch(model, data_loader, optimizer):
+def concat_batches(batch_a, batch_b):
+    # TODO: Merge by interleaving the batches
+    images = torch.cat((batch_a[0], batch_b[0]), 0)
+    labels = torch.cat((batch_a[1], batch_b[1]), 0)
+    idxs = torch.cat((batch_a[2], batch_b[2]), 0)
+
+    return images, labels, idxs
+
+def update_histogram(model, data_loader, epoch):
+    all_labels = torch.LongTensor([]).to(DEVICE)
+    all_index = torch.LongTensor([]).to(DEVICE)
+
+    with torch.no_grad():
+        for i, batch in enumerate(data_loader):
+            images, labels, index = batch
+            batch_size = labels.size(0)
+
+            images = images.to(DEVICE)
+            labels = labels.to(DEVICE)
+            index = index.to(DEVICE)
+
+            all_labels = torch.cat((all_labels, labels))
+            all_index = torch.cat((all_index, index))
+            model.build_histo(images)
+
+        base = model.get_histo_base()
+        our = model.get_histo()
+        difference = base-our
+        # print("Base version:")
+        # print(base)
+        # print('Our version:')
+        # print(our)
+        # print('diff:')
+        # print(difference)
+
+    n_rows = 3
+    n_samples = n_rows**2
+
+    highest_base = base.argsort(descending=True)[:n_samples]
+    highest_our = our.argsort(descending=True)[:n_samples]
+
+    print("highest => base:{}, our:{}".format(highest_base, highest_our))
+
+    print(all_index[highest_base])
+    print(all_labels[highest_base])
+
+    img_base = sample_idxs_from_loader(all_index[highest_base], data_loader, 1)
+    img_our = sample_idxs_from_loader(all_index[highest_our], data_loader, 1)
+
+    fig=plt.figure(figsize=(16, 8))
+
+    ax = fig.add_subplot(1, 2, 1)
+    grid = make_grid(img_base.reshape(n_samples,3,64,64), n_rows)
+    plt.imshow(grid.permute(1,2,0).cpu())
+    ax.set_title("base", fontdict={"fontsize":30})
+
+    remove_frame(plt)
+
+    ax = fig.add_subplot(1, 2, 2)
+    grid = make_grid(img_our.reshape(n_samples,3,64,64), n_rows)
+    plt.imshow(grid.permute(1,2,0).cpu())
+    ax.set_title("our", fontdict={"fontsize":30})
+
+    remove_frame(plt)
+
+    fig.savefig('images/{}/base_vs_our/epoch={}'.format(FOLDER_NAME, epoch), bbox_inches='tight')
+    print("DONE WITH UPDATE")
+
+    plt.close()
+    return base
+
+def train_epoch(model, data_loaders: DataLoaderTuple, optimizer):
     """
     train the model for one epoch
     """
+
+    face_loader, nonface_loader = data_loaders
 
     model.train()
     avg_loss = 0
     avg_acc = 0
 
+    # The batches contain Image(rgb x w x h), Labels (1 for 0), original dataset indices
+    face_batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+    nonface_batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
-    for i, batch in enumerate(data_loader):
-        images, labels, index = batch
+    # TODO: divide the batch-size of the loader over both face_Batch and nonface_batch, rather than doubling the batch-size
+    for i, (face_batch, nonface_batch) in enumerate(zip(face_loader, nonface_loader)):
+        images, labels, idxs = concat_batches(face_batch, nonface_batch)
+        print("START TRAINING")
         batch_size = labels.size(0)
-
-        # print("TRAIN => BATCH SIZE:", batch_size)
 
         images = images.to(DEVICE)
         labels = labels.to(DEVICE)
@@ -171,8 +250,6 @@ def train_epoch(model, data_loader, optimizer):
         avg_loss += loss.item()
         avg_acc += acc
 
-        # print_best_and_worst(images, labels, pred, 123)
-
         if i % ARGS.eval_freq == 0:
             print("batch:{} accuracy:{}".format(i, acc))
 
@@ -180,10 +257,11 @@ def train_epoch(model, data_loader, optimizer):
 
     return avg_loss/(i+1), avg_acc/(i+1)
 
-def eval_epoch(model, data_loader, epoch):
+def eval_epoch(model, data_loaders: DataLoaderTuple, epoch):
     """
     Calculates the validation error of the model
     """
+    face_loader, nonface_loader = data_loaders
 
     model.eval()
     avg_loss = 0
@@ -191,17 +269,16 @@ def eval_epoch(model, data_loader, epoch):
 
     all_labels = torch.LongTensor([]).to(DEVICE)
     all_preds = torch.Tensor([]).to(DEVICE)
-    all_indeces = torch.LongTensor([]).to(DEVICE)
+    all_idxs = torch.LongTensor([]).to(DEVICE)
 
     with torch.no_grad():
-        for i, batch in enumerate(data_loader):
-            images, labels, index = batch
+        for i, (face_batch, nonface_batch) in enumerate(zip(face_loader, nonface_loader)):
+            images, labels, idxs = concat_batches(face_batch, nonface_batch)
             batch_size = labels.size(0)
 
             images = images.to(DEVICE)
             labels = labels.to(DEVICE)
-            index = index.to(DEVICE)
-
+            idxs = idxs.to(DEVICE)
             pred, loss = model.forward(images, labels)
 
             loss = loss/batch_size
@@ -212,37 +289,47 @@ def eval_epoch(model, data_loader, epoch):
 
             all_labels = torch.cat((all_labels, labels))
             all_preds = torch.cat((all_preds, pred))
-            all_indeces = torch.cat((all_indeces, index))
+            all_idxs = torch.cat((all_idxs, idxs))
+
 
     print("length of all eval:", len(all_labels))
-    best_faces, worst_faces, best_other, worst_other = get_best_and_worst(all_labels, all_preds)
+    # best_faces, worst_faces, best_other, worst_other = get_best_and_worst(all_labels, all_preds)
 
-    visualize_best_and_worst(data_loader, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other)
+    # visualize_best_and_worst(data_loader, all_labels, all_idxs, epoch, best_faces, worst_faces, best_other, worst_other)
     return avg_loss/(i+1), avg_acc/(i+1)
 
 def main():
-    # import data
-    train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size,
-                                                                                 train_size=0.8, max_images=ARGS.dataset_size)
+    train_loaders: DataLoaderTuple
+    valid_loaders: DataLoaderTuple
 
-    # train_loader, valid_loader, train_data, valid_data = train_and_valid_loaders(batch_size=ARGS.batch_size, 
-    #                                                                              train_size=0.8)
+    train_loaders, valid_loaders = train_and_valid_loaders(
+        batch_size=ARGS.batch_size,
+        train_size=0.8,
+        max_images=ARGS.dataset_size
+    )
 
-    # create model
+    # Initialize model
     model = vae_model.Db_vae(z_dim=ARGS.zdim, device=DEVICE).to(DEVICE)
 
-    # create optimizer
+    # Initialize optimizer
     optimizer = torch.optim.Adam(model.parameters())
 
     for epoch in range(ARGS.epochs):
+        # Generic sequential dataloader to sample histogram
+        hist_loader = make_hist_loader(train_loaders.faces.dataset, ARGS.batch_size)
+        hist = update_histogram(model, hist_loader, epoch)
+
+        train_loaders.faces.sampler.weights = hist
+
         print("Starting epoch:{}/{}".format(epoch, ARGS.epochs))
-        train_error, train_acc = train_epoch(model, train_loader, optimizer)
+        train_error, train_acc = train_epoch(model, train_loaders, optimizer)
         print("training done")
-        val_error, val_acc = eval_epoch(model, valid_loader, epoch)
+        val_error, val_acc = eval_epoch(model, valid_loaders, epoch)
 
         print("epoch {}/{}, train_error={:.2f}, train_acc={:.2f}, val_error={:.2f}, val_acc={:.2f}".format(epoch,
                                     ARGS.epochs, train_error, train_acc, val_error, val_acc))
 
+        valid_data = concat_datasets(*valid_loaders, proportion_a=0.5)
         print_reconstruction(model, valid_data, epoch)
     return
 

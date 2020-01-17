@@ -1,6 +1,7 @@
 import torch
-from torch.utils.data import Dataset as TorchDataset, ConcatDataset, DataLoader, Dataset, Sampler
+from torch.utils.data import Dataset as TorchDataset, ConcatDataset, DataLoader, Dataset, Sampler, WeightedRandomSampler, BatchSampler, SequentialSampler
 from torch.utils.data.dataset import Subset
+from torch.utils.data.sampler import RandomSampler
 import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
 from setup import config
@@ -8,14 +9,20 @@ import os
 import numpy as np
 import pandas as pd
 from PIL import Image
-from typing import Callable, Optional
+from typing import Callable, Optional, Tuple, NamedTuple
 from enum import Enum
+
+from torch import float64
 
 # Default transform
 default_transform = transforms.Compose([
     transforms.Resize((64, 64)),
     transforms.ToTensor()
 ])
+
+class DataLoaderTuple(NamedTuple):
+    faces: DataLoader
+    nonfaces: DataLoader
 
 class DataLabel(Enum):
     POSITIVE = 1
@@ -105,29 +112,51 @@ def concat_datasets(dataset_a, dataset_b, proportion_a):
 
 def train_and_valid_loaders(
     batch_size: int,
+    max_images: int,
     shuffle: bool = True,
     train_size: float = 0.8,
     proportion_faces: float = 0.5,
-    max_images: Optional[int] = None,
-    reduce_bias: bool = False
+    enable_debias: bool = True,
+    sample_bias_with_replacement: bool = True,
 ):
+    nr_images: Optional[int] = max_images if max_images >= 0 else None
+
     # Create the datasets
     imagenet_dataset: Dataset = ImagenetDataset(config.path_to_imagenet_images)
     celeb_dataset: Dataset = CelebDataset(config.path_to_celeba_images, config.path_to_celeba_bbox_file)
 
     # Split both datasets into training and validation
-    celeb_train, celeb_valid = split_dataset(celeb_dataset, train_size, max_images)
-    imagenet_train, imagenet_valid = split_dataset(imagenet_dataset, train_size, max_images)
+    celeb_train, celeb_valid = split_dataset(celeb_dataset, train_size, nr_images)
+    imagenet_train, imagenet_valid = split_dataset(imagenet_dataset, train_size, nr_images)
 
-    # Concat the sources of data by their proportions
-    dataset_train: Dataset = concat_datasets(celeb_train, imagenet_train, proportion_faces)
-    dataset_valid: Dataset = concat_datasets(celeb_valid, imagenet_valid, proportion_faces)
+    # Nonfaces loaders
+    train_nonfaces_loader: DataLoader = DataLoader(imagenet_train, batch_size=batch_size, shuffle=shuffle)
+    valid_nonfaces_loader: DataLoader = DataLoader(imagenet_valid, batch_size=batch_size, shuffle=False)
 
-    # Define the loaders
-    train_loader: DataLoader = DataLoader(dataset_train, batch_size=batch_size, shuffle=shuffle, num_workers=5)
-    valid_loader: DataLoader = DataLoader(dataset_valid, batch_size=batch_size, shuffle=False, num_workers=5)
+    # Init some weights
+    init_weights = torch.rand(len(celeb_train))
 
-    return train_loader, valid_loader, dataset_train, dataset_valid
+    # Debugging: Uncomment to see that item at index 9 occurs more oftne
+    # ❗ Important: Note that the indices dont have to be below 1
+    # START DEBUG
+    # test = torch.Tensor(len(celeb_train)).fill_(0.0001)
+    # test[9] = 10.999
+    # END DEBUG
+
+    # Define samplers: random for non-debias, weighed for debiasing
+    random_train_sampler = RandomSampler(celeb_train)
+    weights_sampler_train = WeightedRandomSampler(init_weights, len(celeb_train), replacement=sample_bias_with_replacement)
+
+    train_sampler = weights_sampler_train if enable_debias else random_train_sampler
+
+    # Define the face loaders
+    train_faces_loader: DataLoader = DataLoader(celeb_train, sampler=train_sampler, batch_size=batch_size)
+    valid_faces_loader: DataLoader = DataLoader(celeb_valid, batch_size=batch_size, shuffle=shuffle)
+
+    train_loaders: DataLoaderTuple = DataLoaderTuple(train_faces_loader, train_nonfaces_loader)
+    valid_loaders: DataLoaderTuple = DataLoaderTuple(valid_faces_loader, valid_nonfaces_loader)
+
+    return train_loaders, valid_loaders
 
 def sample_dataset(dataset: Dataset, nr_samples: int):
     max_nr_items: int = min(nr_samples, len(dataset))
@@ -137,9 +166,14 @@ def sample_dataset(dataset: Dataset, nr_samples: int):
 
 def sample_idxs_from_loader(idxs, data_loader, label):
     if label == 1:
-        dataset = data_loader.dataset.datasets[0].dataset.dataset
+        dataset = data_loader.dataset.dataset
     else:
         dataset = data_loader.dataset.datasets[1].dataset.dataset
 
     return torch.stack([dataset[idx.item()][0] for idx in idxs])
 
+def make_hist_loader(dataset, batch_size):
+    sampler = SequentialSampler(dataset)
+    batch_sampler = BatchSampler(sampler, batch_size=batch_size, drop_last=False)
+
+    return DataLoader(dataset, batch_sampler=batch_sampler)
