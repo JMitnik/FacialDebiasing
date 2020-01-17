@@ -351,7 +351,6 @@ if __name__ == "__main__":
     parser.add_argument('--eval_freq', default=5, type=int,
                         help='total size of database')
 
-
     ARGS = parser.parse_args()
 
     main()
