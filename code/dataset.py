@@ -101,7 +101,7 @@ def make_eval_loader(
 ):
 
     # Define faces dataset
-    pbb_dataset = PBBDataset(
+    pbb_dataset = PPBDataset(
         path_to_images=config.path_to_eval_face_images,
         path_to_metadata=config.path_to_eval_metadata,
         filter_excl_country=filter_exclude_country,
