@@ -356,7 +356,7 @@ if __name__ == "__main__":
     print("ARGS => batch_size:{}, epochs:{}, z_dim:{}, alpha:{}, dataset_size:{}, eval_freq:{}, debiasing type:{}".format(ARGS.batch_size,
                                 ARGS.epochs, ARGS.zdim, ARGS.alpha, ARGS.dataset_size, ARGS.eval_freq, ARGS.debias_type))
 
-    FOLDER_NAME = "{}".format(datetime.datetime.now().strftime("%H_%M_%S"))
+    FOLDER_NAME = "{}".format(datetime.datetime.now().strftime("%m/%d/%Y---%H_%M_%S"))
 
     os.makedirs("results/"+ FOLDER_NAME + '/best_and_worst')
     os.makedirs("results/"+ FOLDER_NAME + '/bias_probs')
