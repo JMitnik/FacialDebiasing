@@ -312,7 +312,7 @@ def main():
             train_loaders.faces.sampler.weights = hist
 
 
-        # train_loss, train_acc = train_epoch(model, train_loaders, optimizer)
+        train_loss, train_acc = train_epoch(model, train_loaders, optimizer)
         print("training done")
         val_loss, val_acc = eval_epoch(model, valid_loaders, epoch)
 
