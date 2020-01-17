@@ -31,12 +31,16 @@ def split_dataset(dataset, train_size: float, max_images: Optional[int] = None):
 
     return train_data, valid_data
 
-def concat_datasets(dataset_a, dataset_b, proportion_a):
-    proportion_b: float = 1 - proportion_a
+def concat_datasets(dataset_a, dataset_b, proportion_a: Optional[float] = None):
+    if proportion_a:
+        proportion_b = 1 - proportion_a
+        # Calculate amount of dataset
+        nr_dataset_a: int = int(np.floor(proportion_a * len(dataset_a)))
+        nr_dataset_b: int = int(np.floor(proportion_b * len(dataset_b)))
 
-    # Calculate amount of dataset
-    nr_dataset_a: int = int(np.floor(proportion_a * len(dataset_a)))
-    nr_dataset_b: int = int(np.floor(proportion_b * len(dataset_b)))
+    else:
+        nr_dataset_a = len(dataset_a)
+        nr_dataset_b = len(dataset_b)
 
     # Subsample the datasets
     sampled_dataset_a = Subset(dataset_a, np.arange(nr_dataset_a))
@@ -114,11 +118,18 @@ def make_eval_loader(
         path_to_images=config.path_to_eval_nonface_images
     )
 
+    imagenet_dataset = subsample_dataset(imagenet_dataset, len(pbb_dataset))
+
     # Concat and wrap with loader
-    total_dataset = concat_datasets(pbb_dataset, imagenet_dataset, proportion_faces)
+    total_dataset = concat_datasets(pbb_dataset, imagenet_dataset, None)
     data_loader = DataLoader(total_dataset, batch_size, shuffle=True)
 
     return data_loader
+
+def subsample_dataset(dataset: Dataset, nr_subsamples: int):
+    idxs = np.arange(nr_subsamples)
+    return Subset(dataset, idxs)
+
 
 def sample_dataset(dataset: Dataset, nr_samples: int):
     max_nr_items: int = min(nr_samples, len(dataset))
@@ -133,7 +144,6 @@ def sample_idxs_from_loaders(idxs, data_loaders, label):
         dataset = data_loaders.nonfaces.dataset.dataset
 
     return torch.stack([dataset[idx.item()][0] for idx in idxs])
-
 
 def sample_idxs_from_loader(idxs, data_loader, label):
     if label == 1:
