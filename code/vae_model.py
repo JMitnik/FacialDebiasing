@@ -173,7 +173,7 @@ class Db_vae(nn.Module):
             
             # calculate VAE losses
             # loss_recon = F.l1_loss(res, face_images, reduction='sum')
-            loss_recon = torch.abs(face_images - res).sum()
+            loss_recon = ((face_images - res)**2).sum()
 
 
             loss_kl = torch.distributions.kl.kl_divergence(dist, self.target_dist)
@@ -248,8 +248,6 @@ class Db_vae(nn.Module):
             p /= np.sum(p)
 
             probs = torch.max(probs, torch.Tensor(p).to(self.device))
-        
-        self.means = self.means.to(self.device)
 
         probs /= probs.sum()
 

@@ -186,7 +186,10 @@ def update_histogram(model, data_loader, epoch):
 
             all_labels = torch.cat((all_labels, labels))
             all_index = torch.cat((all_index, index))
-            model.build_histo(images)
+            if ARGS.debias_type == "base":
+                model.build_means(images)
+            elif ARGS.debias_type == "our":
+                model.build_histo(images)
 
         if ARGS.debias_type == "base":
             probs = model.get_histo_base()
@@ -369,7 +372,7 @@ if __name__ == "__main__":
         write_file.write(f"debiasing type = {ARGS.debias_type}\n")
 
     with open("results/" + FOLDER_NAME + "/training_results.csv", "w") as write_file:
-        write_file.write("epoch, train_loss, valid_loss, train_acc, valid_acc\n")
+        write_file.write("epoch,train_loss,valid_loss,train_acc,valid_acc\n")
 
 
     main()
