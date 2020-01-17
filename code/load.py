@@ -1,14 +1,13 @@
 # %%
+from torch.utils.data.dataloader import DataLoader
 from setup import config
-from datasets import PBBDataset
+from dataset import make_eval_loader
 
 
-eval_set = PBBDataset(
-    path_to_images=config.path_to_eval_images,
-    path_to_metadata=config.path_to_eval_metadata,
-    filter_excl_country=['Senegal']
+eval_set: DataLoader = make_eval_loader(
+    filter_exclude_country=['Senegal']
 )
 
-eval_set[20]
+
 
 # %%

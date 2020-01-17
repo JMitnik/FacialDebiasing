@@ -4,7 +4,7 @@ from torch.utils.data.dataset import Subset
 from torch.utils.data.sampler import RandomSampler
 from setup import config
 import numpy as np
-from typing import Callable, Optional, List, NamedTuple, Union
+from typing import Optional, List, NamedTuple, Union
 
 from datasets.generic import CountryEnum, DataLoaderTuple, GenderEnum, SkinColorEnum
 from datasets.celeb_a import CelebDataset
@@ -93,14 +93,15 @@ def make_train_and_valid_loaders(
     return train_loaders, valid_loaders
 
 def make_eval_loader(
-    self,
     filter_exclude_gender: List[Union[GenderEnum, str]] = [],
     filter_exclude_country: List[Union[CountryEnum, str]] = [],
     filter_exclude_skin_color: List[Union[SkinColorEnum, str]] = [],
     proportion_faces: float = 0.5,
     batch_size: int = 16
 ):
-    PBB_dataset = PBBDataset(
+
+    # Define faces dataset
+    pbb_dataset = PBBDataset(
         path_to_images=config.path_to_eval_face_images,
         path_to_metadata=config.path_to_eval_metadata,
         filter_excl_country=filter_exclude_country,
@@ -108,13 +109,14 @@ def make_eval_loader(
         filter_excl_skin_color=filter_exclude_skin_color
     )
 
+    # Define non-faces dataset
     imagenet_dataset = ImagenetDataset(
         path_to_images=config.path_to_eval_nonface_images
     )
 
-    total_dataset = concat_datasets(PBBDataset, imagenet_dataset, proportion_faces)
-
-    data_loader = DataLoader(total_dataset, batch_size)
+    # Concat and wrap with loader
+    total_dataset = concat_datasets(pbb_dataset, imagenet_dataset, proportion_faces)
+    data_loader = DataLoader(total_dataset, batch_size, shuffle=True)
 
     return data_loader
 

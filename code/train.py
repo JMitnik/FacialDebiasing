@@ -13,7 +13,7 @@ import vae_model
 import argparse
 from setup import config
 from torch.utils.data import ConcatDataset, DataLoader
-from datasets import concat_datasets, make_train_and_valid_loaders, sample_dataset, sample_idxs_from_loader, make_hist_loader
+from dataset import concat_datasets, make_train_and_valid_loaders, sample_dataset, sample_idxs_from_loader, make_hist_loader
 from datasets.generic import DataLoaderTuple
 
 from torchvision.utils import make_grid
