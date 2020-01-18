@@ -13,7 +13,7 @@ import vae_model
 import argparse
 from setup import config
 from torch.utils.data import ConcatDataset, DataLoader
-from dataset import concat_datasets, make_train_and_valid_loaders, sample_dataset, sample_idxs_from_loader, make_hist_loader
+from dataset import concat_datasets, make_train_and_valid_loaders, sample_dataset, sample_idxs_from_loader, sample_idxs_from_loaders, make_hist_loader
 from datasets.generic import DataLoaderTuple
 
 from torchvision.utils import make_grid
@@ -51,43 +51,59 @@ def remove_frame(plt):
     for tick in frame.axes.get_yticklines():
         tick.set_visible(False)
 
-def get_best_and_worst(labels, pred):
+def get_best_and_worst_predictions(labels, pred):
     n_rows = 4
     n_samples = n_rows**2
 
-    labels = labels.float().cpu()
-    print("face procentage:", float(labels.sum().item())/len(labels))
+    # labels = labels.float().cpu()
+    print("face percentage:", float(labels.sum().item())/len(labels))
+    
 
-    pred = pred.cpu()
+    indices = torch.Tensor([i for i in range(len(labels))]).long().to(DEVICE)
+    
+    faceslice = labels == 1
+    faces,       other       = pred[faceslice],    pred[~faceslice]
+    faces_index, other_index = indices[faceslice], indices[~faceslice]
+    
+    worst_faces = faces_index[faces.argsort()[:n_samples]]
+    best_faces = faces_index[faces.argsort(descending=True)[:n_samples]]
+    
+    worst_other = other_index[other.argsort(descending=True)[:n_samples]]
+    best_other = other_index[other.argsort()[:n_samples]]
+    
+    # TODO: check if this may be removed:
 
-    faces_max = torch.Tensor([x for x in pred])
-    faces_min = torch.Tensor([x for x in pred])
-    other_max = torch.Tensor([x for x in pred])
-    other_min = torch.Tensor([x for x in pred])
 
-    faces_max[labels == 0] = np.inf
-    faces_min[labels == 0] = -np.inf
-    other_max[labels == 1] = np.inf
-    other_min[labels == 1] = -np.inf
+    # pred = pred.cpu()
+    # faces_max = torch.Tensor([x for x in pred])
+    # faces_min = torch.Tensor([x for x in pred])
+    # other_max = torch.Tensor([x for x in pred])
+    # other_min = torch.Tensor([x for x in pred])
 
-    worst_faces = faces_max.argsort()[:n_samples]
-    best_faces = faces_min.argsort(descending=True)[:n_samples]
+    # faces_max[labels == 0] = np.inf
+    # faces_min[labels == 0] = -np.inf
+    # other_max[labels == 1] = np.inf
+    # other_min[labels == 1] = -np.inf
 
-    worst_other = other_min.argsort(descending=True)[:n_samples]
-    best_other = other_max.argsort()[:n_samples]
+    # # I think we are doing it the wrong way around, worst are best
+    # worst_faces = faces_max.argsort()[:n_samples]
+    # best_faces = faces_min.argsort(descending=True)[:n_samples]
+
+    # worst_other = other_min.argsort(descending=True)[:n_samples]
+    # best_other = other_max.argsort()[:n_samples]
 
     return best_faces, worst_faces, best_other, worst_other
 
-def visualize_best_and_worst(data_loaders, all_labels, all_indeces, epoch, best_faces, worst_faces, best_other, worst_other, n_rows=4):
+def visualize_best_and_worst(data_loaders, all_labels, all_indices, epoch, best_faces, worst_faces, best_other, worst_other, n_rows=4):
     n_samples = n_rows**2
 
     fig=plt.figure(figsize=(16, 16))
 
     sub_titles = ["Best faces", "Worst faces", "Best non-faces", "Worst non-faces"]
-    for i, indeces in enumerate((best_faces, worst_faces, best_other, worst_other)):
-        labels, indeces = all_labels[indeces], all_indeces[indeces]
+    for i, indices in enumerate((best_faces, worst_faces, best_other, worst_other)):
+        labels, indices = all_labels[indices], all_indices[indices]
 
-        images = sample_idxs_from_loaders(indeces, data_loaders, labels[0])
+        images = sample_idxs_from_loaders(indices, data_loaders, labels[0])
 
         ax = fig.add_subplot(2, 2, i+1)
         grid = make_grid(images.reshape(n_samples,3,64,64), n_rows)
@@ -282,7 +298,7 @@ def eval_epoch(model, data_loaders: DataLoaderTuple, epoch):
             all_idxs = torch.cat((all_idxs, idxs))
 
 
-    best_faces, worst_faces, best_other, worst_other = get_best_and_worst(all_labels, all_preds)
+    best_faces, worst_faces, best_other, worst_other = get_best_and_worst_predictions(all_labels, all_preds)
     visualize_best_and_worst(data_loaders, all_labels, all_idxs, epoch, best_faces, worst_faces, best_other, worst_other)
 
     return avg_loss/(i+1), avg_acc/(i+1)
@@ -322,7 +338,7 @@ def main():
                                     ARGS.epochs, train_loss, train_acc, val_loss, val_acc))
 
         valid_data = concat_datasets(valid_loaders.faces.dataset, valid_loaders.nonfaces.dataset, proportion_a=0.5)
-        print(valid_data)
+        # print(valid_data)
         print_reconstruction(model, valid_data, epoch)
 
         with open("results/"+FOLDER_NAME + "/training_results.csv", "a") as write_file:

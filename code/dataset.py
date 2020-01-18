@@ -89,7 +89,7 @@ def make_train_and_valid_loaders(
 
     # Define the face loaders
     train_faces_loader: DataLoader = DataLoader(celeb_train, sampler=train_sampler, batch_size=batch_size, num_workers=5)
-    valid_faces_loader: DataLoader = DataLoader(celeb_valid, batch_size=batch_size, shuffle=shuffle. num_workers=5)
+    valid_faces_loader: DataLoader = DataLoader(celeb_valid, batch_size=batch_size, shuffle=shuffle, num_workers=5)
 
     train_loaders: DataLoaderTuple = DataLoaderTuple(train_faces_loader, train_nonfaces_loader)
     valid_loaders: DataLoaderTuple = DataLoaderTuple(valid_faces_loader, valid_nonfaces_loader)
