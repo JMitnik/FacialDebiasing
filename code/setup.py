@@ -7,11 +7,8 @@ import argparse
 # Default device
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# Run folder name
-FOLDER_NAME = "images_{}".format(datetime.datetime.now())
-os.makedirs("images/"+ FOLDER_NAME + '/best_and_worst')
-os.makedirs("images/"+ FOLDER_NAME + '/base_vs_our')
-os.makedirs("images/"+ FOLDER_NAME + '/reconstructions')
+# Define folder name
+FOLDER_NAME = "{}".format(datetime.datetime.now().strftime("%d_%m_%Y---%H_%M_%S"))
 
 # Parse arguments
 parser = argparse.ArgumentParser()
@@ -27,6 +24,8 @@ parser.add_argument('--dataset_size', type=int,
                     help='total size of database')
 parser.add_argument('--eval_freq', type=int,
                     help='total size of database')
+parser.add_argument('--debias_type', type=str,
+                    help='type of debiasing used')
 ARGS = parser.parse_args()
 
 class Config(NamedTuple):
@@ -36,6 +35,14 @@ class Config(NamedTuple):
     path_to_celeba_bbox_file: str = 'data/celeba/list_bbox_celeba.txt'
     # Path to ImageNet images
     path_to_imagenet_images: str = 'data/imagenet'
+    # Path to evaluation images (Faces)
+    path_to_eval_face_images: str = 'data/ppb/imgs'
+    # Path to evaluation metadata
+    path_to_eval_metadata: str = 'data/ppb/PPB-2017-metadata.csv'
+    # Path to evaluation images (Nonfaces such as Imagenet)
+    path_to_eval_nonface_images: str = 'data/eval_imagenet'
+    # Type of debiasing used
+    debias_type: str = ARGS.debias_type or 'none'
     # Random seed for reproducability
     random_seed: int = 0
     # Device to use
@@ -43,7 +50,7 @@ class Config(NamedTuple):
     # Folder name of the run
     run_folder: str = FOLDER_NAME
     # Batch size
-    batch_size: int = ARGS.batch_size or 128
+    batch_size: int = ARGS.batch_size or 256
     # Epochs
     epochs: int = ARGS.epochs or 10
     # Z dimension
@@ -51,14 +58,31 @@ class Config(NamedTuple):
     # Alpha value
     alpha: float = ARGS.alpha or 0.0
     # Dataset size
-    dataset_size: int = ARGS.dataset_size or 10000
+    dataset_size: int = ARGS.dataset_size or -1
     # Eval frequence
     eval_freq: int = ARGS.eval_freq or 5
-    # Path to evaluation images (Faces)
-    path_to_eval_face_images: str = 'data/ppb/imgs'
-    # Path to evaluation metadata
-    path_to_eval_metadata: str = 'data/ppb/PPB-2017-metadata.csv'
-    # Path to evaluation images (Nonfaces such as Imagenet)
-    path_to_eval_nonface_images: str = 'data/eval_imagenet'
 
 config = Config()
+
+# Write run-folder name
+if not os.path.exists("results"):
+    os.makedirs("results")
+
+os.makedirs("results/"+ FOLDER_NAME + '/best_and_worst')
+os.makedirs("results/"+ FOLDER_NAME + '/bias_probs')
+os.makedirs("results/"+ FOLDER_NAME + '/reconstructions')
+
+with open("results/" + FOLDER_NAME + "/flags.txt", "w") as write_file:
+    write_file.write(f"zdim = {config.zdim}\n")
+    write_file.write(f"alpha = {config.alpha}\n")
+    write_file.write(f"epochs = {config.epochs}\n")
+    write_file.write(f"batch size = {config.batch_size}\n")
+    write_file.write(f"eval frequency = {config.eval_freq}\n")
+    write_file.write(f"dataset size = {config.dataset_size}\n")
+    write_file.write(f"debiasing type = {config.debias_type}\n")
+
+with open("results/" + FOLDER_NAME + "/training_results.csv", "w") as write_file:
+    write_file.write("epoch,train_loss,valid_loss,train_acc,valid_acc\n")
+
+
+print(f"Config => {config}")
