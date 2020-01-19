@@ -94,7 +94,8 @@ def make_eval_loader(
     filter_exclude_country: List[Union[CountryEnum, str]] = [],
     filter_exclude_skin_color: List[Union[SkinColorEnum, str]] = [],
     proportion_faces: float = 0.5,
-    batch_size: int = 16
+    batch_size: int = 16,
+    nr_windows: int = 10
 ):
 
     # Define faces dataset
@@ -104,7 +105,8 @@ def make_eval_loader(
         filter_excl_country=filter_exclude_country,
         filter_excl_gender=filter_exclude_gender,
         filter_excl_skin_color=filter_exclude_skin_color,
-        nr_sub_images=config.batch_size
+        nr_windows=nr_windows,
+        batch_size=batch_size
     )
 
     # Concat and wrap with loader

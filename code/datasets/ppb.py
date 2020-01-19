@@ -6,6 +6,7 @@ import os
 from PIL import Image
 from typing import Callable, Optional, List, Union
 from .generic import CountryEnum, SkinColorEnum, default_transform, DataLabel, GenderEnum, slide_windows_over_img
+from setup import config
 
 class PPBDataset(TorchDataset):
     def __init__(
@@ -15,7 +16,8 @@ class PPBDataset(TorchDataset):
         filter_excl_gender: List[Union[GenderEnum, str]] = [],
         filter_excl_country: List[Union[CountryEnum, str]] = [],
         filter_excl_skin_color: List[Union[SkinColorEnum, str]] = [],
-        nr_sub_images: int = -1,
+        nr_windows: int = 10,
+        batch_size: int = -1,
         transform: Callable = default_transform
     ):
         self.path_to_images: str = path_to_images
@@ -25,9 +27,10 @@ class PPBDataset(TorchDataset):
         self.filter_excl_skin_color: List[Union[SkinColorEnum, str]] = filter_excl_skin_color
         self.transform = transform
 
-        self.nr_sub_images: Optional[int] = None if nr_sub_images < 0 else nr_sub_images
+        self.nr_windows: int = nr_windows
+        self.batch_size: Optional[int] = None if batch_size < 0 else batch_size
 
-        self.df_metadata = self._apply_filters_to_metadata(pd.read_csv(self.path_to_metadata))
+        self.df_metadata: pd.DataFrame = self._apply_filters_to_metadata(pd.read_csv(self.path_to_metadata))
 
 
     def _apply_filters_to_metadata(self, df: pd.DataFrame):
@@ -50,14 +53,14 @@ class PPBDataset(TorchDataset):
 
         img = self.transform(img)
 
-        if self.nr_sub_images:
-            imgs = slide_windows_over_img(img, min_win_size=30, max_win_size=64, nr_windows=self.nr_sub_images)
+        if self.batch_size:
+            imgs = slide_windows_over_img(img, min_win_size=config.eval_min_size, max_win_size=config.eval_max_size, nr_windows=self.nr_windows)
+            imgs = torch.split(imgs, self.batch_size)
         else:
             imgs = img.unsqueeze(0)
 
         label = DataLabel.POSITIVE.value
 
-        imgs = imgs.squeeze()
         return (imgs, label, idx)
 
     def __len__(self):

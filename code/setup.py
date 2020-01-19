@@ -66,7 +66,7 @@ class Config(NamedTuple):
     # Z dimension
     zdim: int = ARGS.zdim or 200
     # Alpha value
-    alpha: float = ARGS.alpha or 0.0
+    alpha: float = ARGS.alpha or 0.01
     # Dataset size
     dataset_size: int = ARGS.dataset_size or -1
     # Eval frequence
@@ -75,6 +75,12 @@ class Config(NamedTuple):
     num_workers: int = 5 if ARGS.num_workers is None else ARGS.num_workers
     # Image size
     image_size: int = 64
+    # Number windows evaluation
+    eval_nr_windows: int = 15
+    # Evaluation window minimum
+    eval_min_size: int = 30
+    # Evaluation window maximum
+    eval_max_size: int = 64
 
 config = Config()
 
