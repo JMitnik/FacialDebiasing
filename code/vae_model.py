@@ -116,7 +116,7 @@ class Decoder(nn.Module):
 
 class Db_vae(nn.Module):
 
-    def __init__(self, z_dim=20, hist_size=1000, device="cpu"):
+    def __init__(self, z_dim=20, hist_size=1000, alpha=0.01, device="cpu"):
         super().__init__()
 
         self.device = device
@@ -134,10 +134,11 @@ class Db_vae(nn.Module):
         self.num_bins = 500
         self.min_val = -15
         self.max_val = 15
-        self.hist = torch.ones((z_dim, self.num_bins)).to(device)
-        self.means = torch.Tensor().to(self.device).to(device)
         
-        self.alpha = 0.01
+        self.hist = torch.ones((z_dim, self.num_bins)).to(self.device)
+        self.means = torch.Tensor().to(self.device)
+        
+        self.alpha = alpha
 
 
     def forward(self, images, labels):
@@ -172,7 +173,7 @@ class Db_vae(nn.Module):
             
             # calculate VAE losses
             # loss_recon = F.l1_loss(res, face_images, reduction='sum')
-            loss_recon = torch.abs(face_images - res).sum()
+            loss_recon = ((face_images - res)**2).sum()
 
 
             loss_kl = torch.distributions.kl.kl_divergence(dist, self.target_dist)
@@ -187,6 +188,20 @@ class Db_vae(nn.Module):
             loss_total = loss_class * self.c1
 
         return pred, loss_total
+
+
+    def interpolate(self, img_1, img_2):
+        _, mean_1, std_1 = self.encoder(img_1.reshape(1,3,64,64))
+        _, mean_2, std_2 = self.encoder(img_2.reshape(1,3,64,64))
+
+
+    def build_means(self, input):
+        _, mean, log_std = self.encoder(input)
+
+        self.means = torch.cat((self.means, mean))
+
+        return
+
 
     def build_histo(self, input):
         """
@@ -233,8 +248,6 @@ class Db_vae(nn.Module):
             p /= np.sum(p)
 
             probs = torch.max(probs, torch.Tensor(p).to(self.device))
-        
-        self.means = self.means.to(self.device)
 
         probs /= probs.sum()
 
@@ -242,7 +255,7 @@ class Db_vae(nn.Module):
 
         return probs
 
-    def get_histo(self):
+    def get_histo_our(self):
         """
             Returns the probabilities given the means given the histo values
         """

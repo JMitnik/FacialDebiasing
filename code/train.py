@@ -18,72 +18,50 @@ import setup
 from setup import config
 
 from torch.utils.data import ConcatDataset, DataLoader
-from dataset import concat_datasets, make_train_and_valid_loaders, sample_dataset, sample_idxs_from_loader, make_hist_loader
+from dataset import make_train_and_valid_loaders, make_hist_loader, concat_datasets
 from datasets.generic import DataLoaderTuple
 
+from torchvision.utils import make_grid
+import matplotlib.pyplot as plt
+
+import gc
+from collections import Counter
+import os
+
 def update_histogram(model, data_loader, epoch):
+    # reset the means and histograms
+    model.hist = torch.ones((config.zdim, model.num_bins)).to(config.device)
+    model.means = torch.Tensor().to(config.device)
+
     all_labels = torch.tensor([], dtype=torch.long).to(config.device)
     all_index = torch.tensor([], dtype=torch.long).to(config.device)
 
     with torch.no_grad():
         for i, batch in enumerate(data_loader):
             images, labels, index = batch
-            batch_size = labels.size(0)
 
-            images = images.to(config.device)
-            labels = labels.to(config.device)
-            index = index.to(config.device)
+            #TEMPORARY TAKE ONLY FACES
+            images, labels, index = images.to(config.device), labels.to(config.device), index.to(config.device)
+            batch_size = labels.size(0)
 
             all_labels = torch.cat((all_labels, labels))
             all_index = torch.cat((all_index, index))
-            model.build_histo(images)
 
-        base = model.get_histo_base()
-        our = model.get_histo()
-        difference = base-our
+            if config.debias_type == "base":
+                model.build_means(images)
+            elif config.debias_type == "our":
+                model.build_histo(images)
 
-        # print("Base version:")
-        # print(base)
-        # print('Our version:')
-        # print(our)
-        # print('diff:')
-        # print(difference)
+        if config.debias_type == "base":
+            probs = model.get_histo_base()
+        elif config.debias_type == "our":
+            probs = model.get_histo_our()
+        else:
+            raise Exception("No coorrect debias method given. choos \"base\" or \"our\"")
 
-    n_rows = 3
-    n_samples = n_rows**2
+    utils.visualize_bias(probs, data_loader, all_labels, all_index, epoch)
 
-    highest_base = base.argsort(descending=True)[:n_samples]
-    highest_our = our.argsort(descending=True)[:n_samples]
-
-    print("highest => base:{}, our:{}".format(highest_base, highest_our))
-
-    print(all_index[highest_base])
-    print(all_labels[highest_base])
-
-    img_base = sample_idxs_from_loader(all_index[highest_base], data_loader, 1)
-    img_our = sample_idxs_from_loader(all_index[highest_our], data_loader, 1)
-
-    fig=plt.figure(figsize=(16, 8))
-
-    ax = fig.add_subplot(1, 2, 1)
-    grid = make_grid(img_base.reshape(n_samples,3,64,64), n_rows)
-    plt.imshow(grid.permute(1,2,0).cpu())
-    ax.set_title("base", fontdict={"fontsize":30})
-
-    utils.remove_frame_from_plot(plt)
-
-    ax = fig.add_subplot(1, 2, 2)
-    grid = make_grid(img_our.reshape(n_samples,3,64,64), n_rows)
-    plt.imshow(grid.permute(1,2,0).cpu())
-    ax.set_title("our", fontdict={"fontsize":30})
-
-    utils.remove_frame_from_plot(plt)
-
-    fig.savefig('images/{}/base_vs_our/epoch={}'.format(config.run_folder, epoch), bbox_inches='tight')
-    print("DONE WITH UPDATE")
-
-    plt.close()
-    return base
+    return probs
 
 def train_epoch(model, data_loaders: DataLoaderTuple, optimizer):
     """
@@ -105,15 +83,16 @@ def train_epoch(model, data_loaders: DataLoaderTuple, optimizer):
     # TODO: divide the batch-size of the loader over both face_Batch and nonface_batch, rather than doubling the batch-size
     for i, (face_batch, nonface_batch) in enumerate(zip(face_loader, nonface_loader)):
         images, labels, idxs = utils.concat_batches(face_batch, nonface_batch)
-        print("START TRAINING")
         batch_size = labels.size(0)
 
-        images = images.to(config.device)
-        labels = labels.to(config.device)
+        images, labels = images.to(config.device), labels.to(config.device)
+
         pred, loss = model.forward(images, labels)
 
         optimizer.zero_grad()
         loss = loss/batch_size
+
+        # calculate the gradients and clip them at 5
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5)
 
@@ -123,7 +102,7 @@ def train_epoch(model, data_loaders: DataLoaderTuple, optimizer):
         avg_loss += loss.item()
         avg_acc += acc
 
-        if ARGS and i % config.eval_freq == 0:
+        if i % config.eval_freq == 0:
             print("batch:{} accuracy:{}".format(i, acc))
 
         count = i
@@ -169,15 +148,17 @@ def eval_epoch(model, data_loaders: DataLoaderTuple, epoch):
             count = i
 
     print(f"Length of all evals: {all_labels.shape[0]}")
-    # best_faces, worst_faces, best_other, worst_other = utils.get_best_and_worst(all_labels, all_preds)
-    # utils.visualize_best_and_worst(data_loader, all_labels, all_idxs, epoch, best_faces, worst_faces, best_other, worst_other)
+
+    best_faces, worst_faces, best_other, worst_other = utils.get_best_and_worst_predictions(all_labels, all_preds)
+    utils.visualize_best_and_worst(data_loaders, all_labels, all_idxs, epoch, best_faces, worst_faces, best_other, worst_other)
+
     return avg_loss/(count+1), avg_acc/(count+1)
 
 def main():
     train_loaders: DataLoaderTuple
     valid_loaders: DataLoaderTuple
 
-    train_loaders, valid_loaders = train_and_valid_loaders(
+    train_loaders, valid_loaders = make_train_and_valid_loaders(
         batch_size=config.batch_size,
         max_images=config.dataset_size
     )
@@ -190,39 +171,30 @@ def main():
 
     for epoch in range(config.epochs):
         # Generic sequential dataloader to sample histogram
-        hist_loader = make_hist_loader(train_loaders.faces.dataset, config.batch_size)
-        hist = update_histogram(model, hist_loader, epoch)
-        train_loaders.faces.sampler.weights = hist
-
         print("Starting epoch:{}/{}".format(epoch, config.epochs))
-        train_error, train_acc = train_epoch(model, train_loaders, optimizer)
-        print("training done")
-        val_error, val_acc = eval_epoch(model, valid_loaders, epoch)
 
-        print("epoch {}/{}, train_error={:.2f}, train_acc={:.2f}, val_error={:.2f}, val_acc={:.2f}".format(epoch,
-                                    config.epochs, train_error, train_acc, val_error, val_acc))
+        if config.debias_type != 'none':
+            hist_loader = make_hist_loader(train_loaders.faces.dataset, config.batch_size)
+            hist = update_histogram(model, hist_loader, epoch)
 
-        valid_data = concat_datasets(*valid_loaders, proportion_a=0.5)
+            train_loaders.faces.sampler.weights = hist
+
+        train_loss, train_acc = train_epoch(model, train_loaders, optimizer)
+        print("Training done")
+        val_loss, val_acc = eval_epoch(model, valid_loaders, epoch)
+
+        print("epoch {}/{}, train_loss={:.2f}, train_acc={:.2f}, val_loss={:.2f}, val_acc={:.2f}".format(epoch+1,
+                                    config.epochs, train_loss, train_acc, val_loss, val_acc))
+
+        valid_data = concat_datasets(valid_loaders.faces.dataset, valid_loaders.nonfaces.dataset, proportion_a=0.5)
         utils.print_reconstruction(model, valid_data, epoch)
-    return
+
+        with open("results/" + config.run_folder + "/training_results.csv", "a") as write_file:
+            s = "{},{},{},{},{}\n".format(epoch, train_loss, val_loss, train_acc, val_acc)
+            print("S:", s)
+            write_file.write(s)
+
+        torch.save(model.state_dict(), "results/"+config.run_folder+"/model.pt".format(epoch))
 
 if __name__ == "__main__":
-    print("Start training")
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', default=128, type=int,
-                        help='size of batch')
-    parser.add_argument('--epochs', default=10, type=int,
-                        help='max number of epochs')
-    parser.add_argument('--zdim', default=200, type=int,
-                        help='dimensionality of latent space')
-    parser.add_argument('--alpha', default=0.0, type=float,
-                        help='importance of debiasing')
-    parser.add_argument('--dataset_size', default=10000, type=int,
-                        help='total size of database')
-    parser.add_argument('--eval_freq', default=5, type=int,
-                        help='total size of database')
-
-    ARGS = parser.parse_args()
-
     main()
