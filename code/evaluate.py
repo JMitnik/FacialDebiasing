@@ -68,7 +68,7 @@ def eval_model(model, data_loader):
             all_preds = torch.cat((all_preds, pred))
             all_idxs = torch.cat((all_idxs, idxs))
 
-    print(f"Amount of labels:{len(all_labels)}, Amount of faces:{all_labels.sum()}")
+    # print(f"Amount of labels:{len(all_labels)}, Amount of faces:{all_labels.sum()}")
     acc = calculate_accuracy(all_labels, all_preds)
 
 
@@ -94,7 +94,7 @@ def main():
 
         loss, acc = eval_model(model, eval_loader)
 
-        print(f"{name_list[i]} => loss:{loss}, acc:{acc}")
+        print(f"{name_list[i]} => loss:{loss:.1f}, acc:{acc:.3f}")
 
     # print_reconstruction(model, valid_data, epoch)
 

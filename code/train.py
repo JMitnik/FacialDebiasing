@@ -13,7 +13,7 @@ import vae_model
 import argparse
 from setup import config
 from torch.utils.data import ConcatDataset, DataLoader
-from dataset import concat_datasets, make_train_and_valid_loaders, sample_dataset, sample_idxs_from_loader, make_hist_loader
+from dataset import concat_datasets, make_train_and_valid_loaders, sample_dataset, sample_idxs_from_loader, sample_idxs_from_loaders, make_hist_loader
 from datasets.generic import DataLoaderTuple
 
 from torchvision.utils import make_grid
@@ -356,7 +356,8 @@ if __name__ == "__main__":
     print("ARGS => batch_size:{}, epochs:{}, z_dim:{}, alpha:{}, dataset_size:{}, eval_freq:{}, debiasing type:{}".format(ARGS.batch_size,
                                 ARGS.epochs, ARGS.zdim, ARGS.alpha, ARGS.dataset_size, ARGS.eval_freq, ARGS.debias_type))
 
-    FOLDER_NAME = "{}".format(datetime.datetime.now().strftime("%m/%d/%Y---%H_%M_%S"))
+    FOLDER_NAME = "{}".format(datetime.datetime.now().strftime("%H_%M_%S"))
+    print(FOLDER_NAME)
 
     os.makedirs("results/"+ FOLDER_NAME + '/best_and_worst')
     os.makedirs("results/"+ FOLDER_NAME + '/bias_probs')
