@@ -15,19 +15,6 @@ def calculate_accuracy(labels, pred):
     """
     return float(((pred > 0) == (labels > 0)).sum()) / labels.size()[0]
 
-def remove_frame_from_plot(plt):
-    frame = plt.gca()
-    for xlabel_i in frame.axes.get_xticklabels():
-        xlabel_i.set_visible(False)
-        xlabel_i.set_fontsize(0.0)
-    for xlabel_i in frame.axes.get_yticklabels():
-        xlabel_i.set_fontsize(0.0)
-        xlabel_i.set_visible(False)
-    for tick in frame.axes.get_xticklines():
-        tick.set_visible(False)
-    for tick in frame.axes.get_yticklines():
-        tick.set_visible(False)
-
 def get_best_and_worst_predictions(labels, pred):
     n_rows = 4
     n_samples = n_rows**2

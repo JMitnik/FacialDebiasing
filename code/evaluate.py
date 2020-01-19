@@ -13,6 +13,9 @@ from dataset import make_eval_loader
 from setup import config
 import utils
 
+from torchvision.utils import make_grid
+import matplotlib.pyplot as plt
+
 def eval_model(model, data_loader):
     """
     perform evaluation of a single epoch
@@ -23,9 +26,9 @@ def eval_model(model, data_loader):
 
     count = 0
 
-    all_labels = torch.tensor([], dtype=torch.int).to(config.device)
+    all_labels = torch.tensor([], dtype=torch.long).to(config.device)
     all_preds = torch.tensor([]).to(config.device)
-    all_idxs = torch.tensor([], dtype=torch.int).to(config.device)
+    all_idxs = torch.tensor([], dtype=torch.long).to(config.device)
 
     with torch.no_grad():
         for i, batch in enumerate(data_loader):
@@ -53,6 +56,38 @@ def eval_model(model, data_loader):
 
     return avg_loss/(count+1), acc
 
+def interpolate_images(model, amount):
+    eval_loader: DataLoader = make_eval_loader(batch_size=2)
+
+    for i, batch in enumerate(eval_loader):
+        images, labels, _ = batch
+
+        images = images.to(config.device)
+        labels = labels.to(config.device)
+        recon_images = model.interpolate(images, amount)
+
+        fig=plt.figure(figsize=(16, 16))
+
+        ax = fig.add_subplot(2, 2, 1)
+        grid = make_grid(images[0,:,:,:].view(1,3,64,64), 1)
+        plt.imshow(grid.permute(1,2,0).cpu())
+        utils.remove_frame(plt)
+
+        ax = fig.add_subplot(2, 2, 2)
+        grid = make_grid(images[1,:,:,:].view(1,3,64,64), 1)
+        plt.imshow(grid.permute(1,2,0).cpu())
+        utils.remove_frame(plt)
+
+        ax = fig.add_subplot(2, 1, 2)
+        grid = make_grid(recon_images.reshape(amount,3,64,64), amount)
+        plt.imshow(grid.permute(1,2,0).cpu())
+        utils.remove_frame(plt)
+        
+        plt.show()
+        break
+
+
+
 def main():
     gender_list = [[], ["Female"], ["Male"], ["Female"], ["Male"]]
     skin_list = [[], ["lighter"], ["lighter"], ["darker"], ["darker"]]
@@ -67,12 +102,15 @@ def main():
     model.load_state_dict(torch.load(f"results/{config.path_to_model}/model.pt"))
     model.eval()
 
+    # interpolate_images(model, 20)
+
     for i in range(5):
         eval_loader: DataLoader = make_eval_loader(batch_size=config.batch_size, filter_exclude_skin_color=skin_list[i], filter_exclude_gender=gender_list[i])
 
         loss, acc = eval_model(model, eval_loader)
 
         print(f"{name_list[i]} => loss:{loss:.1f}, acc:{acc:.3f}")
+
 
     return
 

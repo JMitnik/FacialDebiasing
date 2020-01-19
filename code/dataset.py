@@ -106,16 +106,8 @@ def make_eval_loader(
         filter_excl_skin_color=filter_exclude_skin_color
     )
 
-    # Define non-faces dataset
-    imagenet_dataset = ImagenetDataset(
-        path_to_images=config.path_to_eval_nonface_images
-    )
-
-    imagenet_dataset = subsample_dataset(imagenet_dataset, len(pbb_dataset))
-
     # Concat and wrap with loader
-    total_dataset = concat_datasets(pbb_dataset, imagenet_dataset, None)
-    data_loader = DataLoader(total_dataset, batch_size, shuffle=True, num_workers=config.num_workers)
+    data_loader = DataLoader(pbb_dataset, batch_size, shuffle=True, num_workers=config.num_workers)
 
     return data_loader
 
