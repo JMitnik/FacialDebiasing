@@ -3,6 +3,7 @@ import torch
 import datetime
 import os
 import argparse
+from typing import Optional
 
 # Default device
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -26,6 +27,8 @@ parser.add_argument('--eval_freq', type=int,
                     help='total size of database')
 parser.add_argument('--debias_type', type=str,
                     help='type of debiasing used')
+parser.add_argument("--path_to_model", type=str,
+                        help='Path to stored model')
 ARGS = parser.parse_args()
 
 class Config(NamedTuple):
@@ -41,6 +44,8 @@ class Config(NamedTuple):
     path_to_eval_metadata: str = 'data/ppb/PPB-2017-metadata.csv'
     # Path to evaluation images (Nonfaces such as Imagenet)
     path_to_eval_nonface_images: str = 'data/eval_imagenet'
+    # Path to stored model
+    path_to_model: Optional[str] = ARGS.path_to_model or None
     # Type of debiasing used
     debias_type: str = ARGS.debias_type or 'none'
     # Random seed for reproducability
