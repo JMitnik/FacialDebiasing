@@ -7,7 +7,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-
 class Encoder(nn.Module):
     """
     Encodes the data using a CNN
@@ -23,7 +22,7 @@ class Encoder(nn.Module):
 
         self.z_dim = z_dim
 
-        self.layers = nn.Sequential(   
+        self.layers = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=5, stride=2),
             nn.LeakyReLU(),
             nn.BatchNorm2d(64),
@@ -52,9 +51,9 @@ class Encoder(nn.Module):
         """
         Perform forward pass of encoder.
         """
-        
+
         out = self.layers(input)
-        
+
         # return classification, mean and log_std
         return out[:, 0], out[:, 1:self.z_dim+1], F.softplus(out[:,self.z_dim+1:])
 
@@ -134,10 +133,10 @@ class Db_vae(nn.Module):
         self.num_bins = 500
         self.min_val = -15
         self.max_val = 15
-        
+
         self.hist = torch.ones((z_dim, self.num_bins)).to(self.device)
         self.means = torch.Tensor().to(self.device)
-        
+
         self.alpha = alpha
 
 
@@ -148,7 +147,7 @@ class Db_vae(nn.Module):
         """
         pred, mean, std = self.encoder(images)
         # TODO:
-        # Acc of the classfication should be added properly - Requires some 
+        # Acc of the classfication should be added properly - Requires some
         # extra target input
 
         loss_class = F.binary_cross_entropy_with_logits(pred, labels.float(), reduction='sum')
@@ -160,7 +159,7 @@ class Db_vae(nn.Module):
             face_images = images[slice_indices]
             face_mean = mean[slice_indices]
             face_std = std[slice_indices]
-        
+
             # Get single samples from the distributions with reparametrisation trick
             dist = torch.distributions.normal.Normal(face_mean, face_std)
             z = dist.rsample().to(self.device)
@@ -170,7 +169,7 @@ class Db_vae(nn.Module):
             # TODO:
             # Change losses of VAE part only towards those of the actual faces.
             # Also shouldnt feed those to the decoder, waste of time
-            
+
             # calculate VAE losses
             # loss_recon = F.l1_loss(res, face_images, reduction='sum')
             loss_recon = ((face_images - res)**2).sum()
@@ -183,7 +182,7 @@ class Db_vae(nn.Module):
             loss_total = self.c1 * loss_class + self.c2 * loss_recon + self.c3 * loss_kl
 
         else:
-            # OPTIONAL: 
+            # OPTIONAL:
             # multiply by c1
             loss_total = loss_class * self.c1
 
@@ -212,7 +211,7 @@ class Db_vae(nn.Module):
         """
 
         samples_per_dist = 1000
-        
+
         _, mean, log_std = self.encoder(input)
 
         self.means = torch.cat((self.means, mean))
@@ -221,11 +220,11 @@ class Db_vae(nn.Module):
         z = dist.rsample((samples_per_dist,)).to(self.device)
         # NOTE those samples are added to the first axis!
 
-        self.hist += torch.stack([torch.histc(z[:, :, i], 
-                                  min=self.min_val, 
-                                  max=self.max_val, 
+        self.hist += torch.stack([torch.histc(z[:, :, i],
+                                  min=self.min_val,
+                                  max=self.max_val,
                                   bins=self.num_bins) for i in range(self.z_dim)])
-        
+
         return
 
     def get_histo_base(self):
@@ -236,7 +235,7 @@ class Db_vae(nn.Module):
             dist = self.means[:,i].cpu().numpy()
 
             hist, bins = np.histogram(dist, density=True, bins=self.num_bins)
-            
+
             bins[0] = -float('inf')
             bins[-1] = float('inf')
             bin_idx = np.digitize(dist, bins)
@@ -268,18 +267,18 @@ class Db_vae(nn.Module):
 
         weights = torch.Tensor([]).to(self.device)
         for mu in self.means:
-            # Gets probability for each 
-            newhist = torch.stack([torch.histc(i, 
-                                  min=self.min_val, 
-                                  max=self.max_val, 
+            # Gets probability for each
+            newhist = torch.stack([torch.histc(i,
+                                  min=self.min_val,
+                                  max=self.max_val,
                                   bins=self.num_bins) for i in mu])
             newhist *= probs
             newhist = newhist.sum(dim=1)
 
             res = 1 / -torch.log(newhist).sum()
-            
+
             weights = torch.cat((weights, res.view(1)))
-            
+
         # Reset values
         self.hist = torch.ones((self.z_dim, self.num_bins)).to(self.device)
         self.means = torch.Tensor().to(self.device)
@@ -288,7 +287,7 @@ class Db_vae(nn.Module):
     def recon_images(self, images):
         with torch.no_grad():
             pred, mean, std = self.encoder(images)
-            
+
             # Get single samples from the distributions with reparametrisation trick
             dist = torch.distributions.normal.Normal(mean, std)
             z = dist.rsample().to(self.device)
@@ -305,4 +304,4 @@ class Db_vae(nn.Module):
         used to plot the data manifold).
         """
 
-        return 
+        return
