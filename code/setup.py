@@ -29,6 +29,8 @@ parser.add_argument('--debias_type', type=str,
                     help='type of debiasing used')
 parser.add_argument("--path_to_model", type=str,
                         help='Path to stored model')
+parser.add_argument("--num_workers", type=int,
+                        help='Path to stored model')
 ARGS = parser.parse_args()
 
 class Config(NamedTuple):
@@ -66,6 +68,8 @@ class Config(NamedTuple):
     dataset_size: int = ARGS.dataset_size or -1
     # Eval frequence
     eval_freq: int = ARGS.eval_freq or 5
+    # Number workers
+    num_workers: int = ARGS.num_workers or 5
 
 config = Config()
 
