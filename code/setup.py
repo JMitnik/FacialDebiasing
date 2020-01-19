@@ -7,6 +7,7 @@ from typing import Optional
 
 # Default device
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+DEVICE = 'cpu'
 
 # Define folder name
 FOLDER_NAME = "{}".format(datetime.datetime.now().strftime("%d_%m_%Y---%H_%M_%S"))

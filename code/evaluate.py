@@ -25,40 +25,39 @@ def eval_model(model, data_loader):
     avg_loss = 0
 
     count = 0
+    correct_count = 0
 
     all_labels = torch.tensor([], dtype=torch.long).to(config.device)
     all_preds = torch.tensor([]).to(config.device)
-    all_idxs = torch.tensor([], dtype=torch.long).to(config.device)
 
     with torch.no_grad():
         for i, batch in enumerate(data_loader):
-            images, labels, idxs = batch
+            print(f"batch number {i}")
+            images, _, _ = batch
 
             if len(images.shape) == 5:
                 images = images.squeeze(dim=0)
 
-            batch_size = labels.size(0)
+            batch_size = images.size(0)
 
             images = images.to(config.device)
-            labels = labels.to(config.device)
-            idxs = idxs.to(config.device)
+            labels = torch.ones(batch_size, dtype=torch.long).to(config.device)
             pred, loss = model.forward(images, labels)
 
             loss = loss/batch_size
-
 
             avg_loss += loss.item()
 
             all_labels = torch.cat((all_labels, labels))
             all_preds = torch.cat((all_preds, pred))
-            all_idxs = torch.cat((all_idxs, idxs))
 
-            count = i
+            count += 1
+            if (pred > 0).any():
+                correct_count += 1
 
-    print(f"Amount of labels:{len(all_labels)}, Amount of faces:{all_labels.sum()}")
-    acc = utils.calculate_accuracy(all_labels, all_preds)
+    print(f"Amount of labels:{count}, Correct labels:{correct_count}")
 
-    return avg_loss/(count+1), acc
+    return avg_loss/(count+1), correct_count/count
 
 def interpolate_images(model, amount):
     eval_loader: DataLoader = make_eval_loader(batch_size=2)
@@ -107,7 +106,9 @@ def main():
     model.eval()
 
     # interpolate_images(model, 20)
-
+    
+    losses = []
+    accs = []
     for i in range(5):
         eval_loader: DataLoader = make_eval_loader(batch_size=config.batch_size, filter_exclude_skin_color=skin_list[i], filter_exclude_gender=gender_list[i])
 
@@ -115,7 +116,11 @@ def main():
 
         print(f"{name_list[i]} => loss:{loss:.1f}, acc:{acc:.3f}")
 
+        losses.append(loss)
+        accs.append(acc)
 
+    print(f"Losses => all:{losses[0]}, dark male: {losses[1]}, dark female: {losses[1]}, white male: {losses[1]}, white female: {losses[4]}")
+    print(f"Accuracy => all:{accs[0]}, dark male: {accs[1]}, dark female: {accs[1]}, white male: {accs[1]}, white female: {accs[4]}")
     return
 
 if __name__ == "__main__":
