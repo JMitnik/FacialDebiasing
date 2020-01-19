@@ -30,6 +30,10 @@ def eval_model(model, data_loader):
     with torch.no_grad():
         for i, batch in enumerate(data_loader):
             images, labels, idxs = batch
+
+            if len(images.shape) == 5:
+                images = images.squeeze(dim=0)
+
             batch_size = labels.size(0)
 
             images = images.to(config.device)

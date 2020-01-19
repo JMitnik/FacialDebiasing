@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data.sampler import SequentialSampler
 from torch.utils.data import ConcatDataset, DataLoader
+import torchvision.transforms as transforms
 from torchvision.utils import make_grid
 import gc
 from collections import Counter

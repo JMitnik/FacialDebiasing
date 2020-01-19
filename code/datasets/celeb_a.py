@@ -1,16 +1,11 @@
 import torch
-from torch.utils.data import Dataset as TorchDataset, ConcatDataset, DataLoader, Dataset, Sampler, WeightedRandomSampler, BatchSampler, SequentialSampler
-from torch.utils.data.dataset import Subset
-from torch.utils.data.sampler import RandomSampler
+from torch.utils.data import Dataset as TorchDataset
 import torchvision.transforms as transforms
-from torchvision.datasets import ImageFolder
-from setup import config
 import os
 import numpy as np
 import pandas as pd
 from PIL import Image
-from typing import Callable, Optional, List, NamedTuple
-from enum import Enum
+from typing import Callable
 
 from torch import float64
 
@@ -43,6 +38,7 @@ class CelebDataset(TorchDataset):
                                       self.df_images.iloc[idx].image_id))
 
         img = self.transform(img)
+
         label: int = DataLabel.POSITIVE.value
 
         return img, label, idx

@@ -33,6 +33,8 @@ parser.add_argument("--num_workers", type=int,
                         help='Path to stored model')
 ARGS = parser.parse_args()
 
+num_workers = 5 if ARGS.num_workers is None else ARGS.num_workers
+
 class Config(NamedTuple):
     # Path to CelebA images
     path_to_celeba_images: str = 'data/celeba/images'
@@ -69,7 +71,9 @@ class Config(NamedTuple):
     # Eval frequence
     eval_freq: int = ARGS.eval_freq or 5
     # Number workers
-    num_workers: int = ARGS.num_workers or 5
+    num_workers: int = 5 if ARGS.num_workers is None else ARGS.num_workers
+    # Image size
+    image_size: int = 64
 
 config = Config()
 
