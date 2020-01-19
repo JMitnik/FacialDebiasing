@@ -16,10 +16,10 @@ import vae_model
 import utils
 import setup
 from setup import config
-import argparse
-from datasets import DataLoaderTuple, concat_datasets, train_and_valid_loaders, sample_dataset, sample_idxs_from_loader, make_hist_loader
 
-ARGS = None
+from torch.utils.data import ConcatDataset, DataLoader
+from dataset import concat_datasets, make_train_and_valid_loaders, sample_dataset, sample_idxs_from_loader, make_hist_loader
+from datasets.generic import DataLoaderTuple
 
 def update_histogram(model, data_loader, epoch):
     all_labels = torch.tensor([], dtype=torch.long).to(config.device)
@@ -179,7 +179,6 @@ def main():
 
     train_loaders, valid_loaders = train_and_valid_loaders(
         batch_size=config.batch_size,
-        train_size=0.8,
         max_images=config.dataset_size
     )
 
@@ -209,4 +208,21 @@ def main():
 
 if __name__ == "__main__":
     print("Start training")
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--batch_size', default=128, type=int,
+                        help='size of batch')
+    parser.add_argument('--epochs', default=10, type=int,
+                        help='max number of epochs')
+    parser.add_argument('--zdim', default=200, type=int,
+                        help='dimensionality of latent space')
+    parser.add_argument('--alpha', default=0.0, type=float,
+                        help='importance of debiasing')
+    parser.add_argument('--dataset_size', default=10000, type=int,
+                        help='total size of database')
+    parser.add_argument('--eval_freq', default=5, type=int,
+                        help='total size of database')
+
+    ARGS = parser.parse_args()
+
     main()

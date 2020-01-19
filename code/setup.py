@@ -54,5 +54,11 @@ class Config(NamedTuple):
     dataset_size: int = ARGS.dataset_size or 10000
     # Eval frequence
     eval_freq: int = ARGS.eval_freq or 5
+    # Path to evaluation images (Faces)
+    path_to_eval_face_images: str = 'data/ppb/imgs'
+    # Path to evaluation metadata
+    path_to_eval_metadata: str = 'data/ppb/PPB-2017-metadata.csv'
+    # Path to evaluation images (Nonfaces such as Imagenet)
+    path_to_eval_nonface_images: str = 'data/eval_imagenet'
 
 config = Config()
