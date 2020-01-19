@@ -72,7 +72,12 @@ def main():
     model.eval()
 
     for i in range(5):
-        eval_loader: DataLoader = make_eval_loader(batch_size=config.batch_size, filter_exclude_skin_color=skin_list[i], filter_exclude_gender=gender_list[i])
+        eval_loader: DataLoader = make_eval_loader(
+            batch_size=config.batch_size,
+            filter_exclude_skin_color=skin_list[i],
+            filter_exclude_gender=gender_list[i],
+            nr_windows=config.eval_nr_windows
+        )
 
         loss, acc = eval_model(model, eval_loader)
 

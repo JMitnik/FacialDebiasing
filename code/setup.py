@@ -74,6 +74,12 @@ class Config(NamedTuple):
     num_workers: int = 5 if ARGS.num_workers is None else ARGS.num_workers
     # Image size
     image_size: int = 64
+    # Number windows evaluation
+    eval_nr_windows: int = 15
+    # Evaluation window minimum
+    eval_min_size: int = 30
+    # Evaluation window maximum
+    eval_max_size: int = 64
 
 config = Config()
 
