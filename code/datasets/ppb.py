@@ -45,7 +45,7 @@ class PPBDataset(TorchDataset):
             result = result.query('gender not in @self.filter_excl_gender')
 
         if len(self.filter_excl_skin_color):
-            result = result.query('bi.fitz not in @self.filter_excl_gender')
+            result = result.query('bi_fitz not in @self.filter_excl_skin_color')
 
         return result
 
@@ -57,7 +57,7 @@ class PPBDataset(TorchDataset):
 
         label = DataLabel.POSITIVE.value
 
-        return img, label, idx
+        return (img, label, idx)
 
     def __len__(self):
         return len(self.df_metadata)

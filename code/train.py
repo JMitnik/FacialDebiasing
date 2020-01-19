@@ -13,7 +13,7 @@ import vae_model
 import argparse
 from setup import config
 from torch.utils.data import ConcatDataset, DataLoader
-from dataset import concat_datasets, make_train_and_valid_loaders, sample_dataset, sample_idxs_from_loader, make_hist_loader
+from dataset import concat_datasets, make_train_and_valid_loaders, sample_dataset, sample_idxs_from_loader, sample_idxs_from_loaders, make_hist_loader
 from datasets.generic import DataLoaderTuple
 
 from torchvision.utils import make_grid
@@ -23,11 +23,10 @@ import gc
 from collections import Counter
 import os
 
-FOLDER_NAME = "images_{}".format(datetime.datetime.now())
-os.makedirs("images/"+ FOLDER_NAME + '/best_and_worst')
-os.makedirs("images/"+ FOLDER_NAME + '/base_vs_our')
-os.makedirs("images/"+ FOLDER_NAME + '/reconstructions')
+FOLDER_NAME = ""
 
+if not os.path.exists("results"):
+    os.makedirs("results")
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -52,45 +51,59 @@ def remove_frame(plt):
     for tick in frame.axes.get_yticklines():
         tick.set_visible(False)
 
-def get_best_and_worst(labels, pred):
+def get_best_and_worst_predictions(labels, pred):
     n_rows = 4
     n_samples = n_rows**2
 
-    labels = labels.float().cpu()
-    print("face procentage:", float(labels.sum().item())/len(labels))
+    # labels = labels.float().cpu()
+    print("face percentage:", float(labels.sum().item())/len(labels))
+    
 
-    pred = pred.cpu()
+    indices = torch.Tensor([i for i in range(len(labels))]).long().to(DEVICE)
+    
+    faceslice = labels == 1
+    faces,       other       = pred[faceslice],    pred[~faceslice]
+    faces_index, other_index = indices[faceslice], indices[~faceslice]
+    
+    worst_faces = faces_index[faces.argsort()[:n_samples]]
+    best_faces = faces_index[faces.argsort(descending=True)[:n_samples]]
+    
+    worst_other = other_index[other.argsort(descending=True)[:n_samples]]
+    best_other = other_index[other.argsort()[:n_samples]]
+    
+    # TODO: check if this may be removed:
 
-    faces_max = torch.Tensor([x for x in pred])
-    faces_min = torch.Tensor([x for x in pred])
-    other_max = torch.Tensor([x for x in pred])
-    other_min = torch.Tensor([x for x in pred])
 
-    faces_max[labels == 0] = np.inf
-    faces_min[labels == 0] = -np.inf
-    other_max[labels == 1] = np.inf
-    other_min[labels == 1] = -np.inf
+    # pred = pred.cpu()
+    # faces_max = torch.Tensor([x for x in pred])
+    # faces_min = torch.Tensor([x for x in pred])
+    # other_max = torch.Tensor([x for x in pred])
+    # other_min = torch.Tensor([x for x in pred])
 
-    worst_faces = faces_max.argsort()[:n_samples]
-    best_faces = faces_min.argsort(descending=True)[:n_samples]
+    # faces_max[labels == 0] = np.inf
+    # faces_min[labels == 0] = -np.inf
+    # other_max[labels == 1] = np.inf
+    # other_min[labels == 1] = -np.inf
 
-    worst_other = other_min.argsort(descending=True)[:n_samples]
-    best_other = other_max.argsort()[:n_samples]
+    # # I think we are doing it the wrong way around, worst are best
+    # worst_faces = faces_max.argsort()[:n_samples]
+    # best_faces = faces_min.argsort(descending=True)[:n_samples]
+
+    # worst_other = other_min.argsort(descending=True)[:n_samples]
+    # best_other = other_max.argsort()[:n_samples]
 
     return best_faces, worst_faces, best_other, worst_other
 
-def visualize_best_and_worst(data_loader, all_labels, all_idxs, epoch, best_faces, worst_faces, best_other, worst_other):
-    n_rows = 4
+def visualize_best_and_worst(data_loaders, all_labels, all_indices, epoch, best_faces, worst_faces, best_other, worst_other, n_rows=4):
     n_samples = n_rows**2
 
     fig=plt.figure(figsize=(16, 16))
 
     sub_titles = ["Best faces", "Worst faces", "Best non-faces", "Worst non-faces"]
-    for i, indeces in enumerate([best_faces, worst_faces, best_other, worst_other]):
-        labels = all_labels[indeces]
-        indeces = all_idxs[indeces]
+    for i, indices in enumerate((best_faces, worst_faces, best_other, worst_other)):
+        labels, indices = all_labels[indices], all_indices[indices]
 
-        images = sample_idxs_from_loader(indeces, data_loader, labels[0])
+        images = sample_idxs_from_loaders(indices, data_loaders, labels[0])
 
         ax = fig.add_subplot(2, 2, i+1)
         grid = make_grid(images.reshape(n_samples,3,64,64), n_rows)
@@ -100,11 +113,9 @@ def visualize_best_and_worst(data_loader, all_labels, all_idxs, epoch, best_face
         remove_frame(plt)
 
 
-    fig.savefig('images/{}/best_and_worst/epoch:{}'.format(FOLDER_NAME,epoch), bbox_inches='tight')
+    fig.savefig('results/{}/best_and_worst/epoch:{}'.format(FOLDER_NAME,epoch), bbox_inches='tight')
 
     plt.close()
-
-    return
 
 def debug_memory():
     tensors = Counter(
@@ -115,17 +126,15 @@ def debug_memory():
     for line in tensors.items():
         print('{}\t{}'.format(*line))
 
-def print_reconstruction(model, data, epoch):
+def print_reconstruction(model, data, epoch, n_rows=4):
     model.eval()
-    ######### RECON IMAGES ###########
-    n_rows = 4
     n_samples = n_rows**2
 
     images = sample_dataset(data, n_samples).to(DEVICE)
 
-    fig=plt.figure(figsize=(16, 8))
-
     recon_images = model.recon_images(images)
+
+    fig=plt.figure(figsize=(16, 8))
 
     fig.add_subplot(1, 2, 1)
     grid = make_grid(images.reshape(n_samples,3,64,64), n_rows)
@@ -139,10 +148,33 @@ def print_reconstruction(model, data, epoch):
 
     remove_frame(plt)
 
-    fig.savefig('images/{}/reconstructions/epoch={}'.format(FOLDER_NAME, epoch), bbox_inches='tight')
+    fig.savefig('results/{}/reconstructions/epoch={}'.format(FOLDER_NAME, epoch), bbox_inches='tight')
 
     plt.close()
-    return
+
+def visualize_bias(probs, data_loader, all_labels, all_index, epoch, n_rows=3):
+    n_samples = n_rows**2
+
+    highest_probs = probs.argsort(descending=True)[:n_samples]
+    lowest_probs = probs.argsort()[:n_samples]
+
+    highest_imgs = sample_idxs_from_loader(all_index[highest_probs], data_loader, 1)
+    worst_imgs = sample_idxs_from_loader(all_index[lowest_probs], data_loader, 1)
+
+    img_list = (highest_imgs, worst_imgs)
+    titles = ("Highest", "Lowest")
+    fig = plt.figure(figsize=(16, 16))
+
+    for i in range(2):
+        ax = fig.add_subplot(1, 2, i+1)
+        grid = make_grid(img_list[i].reshape(n_samples,3,64,64), n_rows)
+        plt.imshow(grid.permute(1,2,0).cpu())
+        ax.set_title(titles[i], fontdict={"fontsize":30})
+
+        remove_frame(plt)
+
+    fig.savefig('results/{}/bias_probs/epoch={}'.format(FOLDER_NAME, epoch), bbox_inches='tight')
+    plt.close()
 
 def concat_batches(batch_a, batch_b):
     # TODO: Merge by interleaving the batches
@@ -153,67 +185,40 @@ def concat_batches(batch_a, batch_b):
     return images, labels, idxs
 
 def update_histogram(model, data_loader, epoch):
+
+    # reset the means and histograms
+    model.hist = torch.ones((ARGS.zdim, model.num_bins)).to(DEVICE)
+    model.means = torch.Tensor().to(DEVICE)
+
     all_labels = torch.LongTensor([]).to(DEVICE)
     all_index = torch.LongTensor([]).to(DEVICE)
 
     with torch.no_grad():
         for i, batch in enumerate(data_loader):
             images, labels, index = batch
-            batch_size = labels.size(0)
 
-            images = images.to(DEVICE)
-            labels = labels.to(DEVICE)
-            index = index.to(DEVICE)
+            #TEMPORARY TAKE ONLY FACES
+            images, labels, index = images.to(DEVICE), labels.to(DEVICE), index.to(DEVICE)
+            batch_size = labels.size(0)
 
             all_labels = torch.cat((all_labels, labels))
             all_index = torch.cat((all_index, index))
-            model.build_histo(images)
+            if ARGS.debias_type == "base":
+                model.build_means(images)
+            elif ARGS.debias_type == "our":
+                model.build_histo(images)
 
-        base = model.get_histo_base()
-        our = model.get_histo()
-        difference = base-our
-        # print("Base version:")
-        # print(base)
-        # print('Our version:')
-        # print(our)
-        # print('diff:')
-        # print(difference)
+        if ARGS.debias_type == "base":
+            probs = model.get_histo_base()
+        elif ARGS.debias_type == "our":
+            probs = model.get_histo_our()
 
-    n_rows = 3
-    n_samples = n_rows**2
+        if probs is None:
+            raise Exception("No coorrect debias method given. choos \"base\" or \"our\"")
 
-    highest_base = base.argsort(descending=True)[:n_samples]
-    highest_our = our.argsort(descending=True)[:n_samples]
+    visualize_bias(probs, data_loader, all_labels, all_index, epoch)
 
-    print("highest => base:{}, our:{}".format(highest_base, highest_our))
-
-    print(all_index[highest_base])
-    print(all_labels[highest_base])
-
-    img_base = sample_idxs_from_loader(all_index[highest_base], data_loader, 1)
-    img_our = sample_idxs_from_loader(all_index[highest_our], data_loader, 1)
-
-    fig=plt.figure(figsize=(16, 8))
-
-    ax = fig.add_subplot(1, 2, 1)
-    grid = make_grid(img_base.reshape(n_samples,3,64,64), n_rows)
-    plt.imshow(grid.permute(1,2,0).cpu())
-    ax.set_title("base", fontdict={"fontsize":30})
-
-    remove_frame(plt)
-
-    ax = fig.add_subplot(1, 2, 2)
-    grid = make_grid(img_our.reshape(n_samples,3,64,64), n_rows)
-    plt.imshow(grid.permute(1,2,0).cpu())
-    ax.set_title("our", fontdict={"fontsize":30})
-
-    remove_frame(plt)
-
-    fig.savefig('images/{}/base_vs_our/epoch={}'.format(FOLDER_NAME, epoch), bbox_inches='tight')
-    print("DONE WITH UPDATE")
-
-    plt.close()
-    return base
+    return probs
 
 def train_epoch(model, data_loaders: DataLoaderTuple, optimizer):
     """
@@ -233,15 +238,15 @@ def train_epoch(model, data_loaders: DataLoaderTuple, optimizer):
     # TODO: divide the batch-size of the loader over both face_Batch and nonface_batch, rather than doubling the batch-size
     for i, (face_batch, nonface_batch) in enumerate(zip(face_loader, nonface_loader)):
         images, labels, idxs = concat_batches(face_batch, nonface_batch)
-        print("START TRAINING")
         batch_size = labels.size(0)
 
-        images = images.to(DEVICE)
-        labels = labels.to(DEVICE)
+        images, labels = images.to(DEVICE), labels.to(DEVICE)
         pred, loss = model.forward(images, labels)
 
         optimizer.zero_grad()
         loss = loss/batch_size
+
+        # calculate the gradients and clip them at 5
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5)
 
@@ -293,10 +298,9 @@ def eval_epoch(model, data_loaders: DataLoaderTuple, epoch):
             all_idxs = torch.cat((all_idxs, idxs))
 
 
-    print("length of all eval:", len(all_labels))
-    # best_faces, worst_faces, best_other, worst_other = get_best_and_worst(all_labels, all_preds)
+    best_faces, worst_faces, best_other, worst_other = get_best_and_worst_predictions(all_labels, all_preds)
+    visualize_best_and_worst(data_loaders, all_labels, all_idxs, epoch, best_faces, worst_faces, best_other, worst_other)
 
-    # visualize_best_and_worst(data_loader, all_labels, all_idxs, epoch, best_faces, worst_faces, best_other, worst_other)
     return avg_loss/(i+1), avg_acc/(i+1)
 
 def main():
@@ -317,28 +321,38 @@ def main():
 
     for epoch in range(ARGS.epochs):
         # Generic sequential dataloader to sample histogram
-        hist_loader = make_hist_loader(train_loaders.faces.dataset, ARGS.batch_size)
-        hist = update_histogram(model, hist_loader, epoch)
-
-        train_loaders.faces.sampler.weights = hist
 
         print("Starting epoch:{}/{}".format(epoch, ARGS.epochs))
-        train_error, train_acc = train_epoch(model, train_loaders, optimizer)
+
+        if ARGS.debias_type != 'none':
+            hist_loader = make_hist_loader(train_loaders.faces.dataset, ARGS.batch_size)
+            hist = update_histogram(model, hist_loader, epoch)
+
+            train_loaders.faces.sampler.weights = hist
+
+        train_loss, train_acc = train_epoch(model, train_loaders, optimizer)
         print("training done")
-        val_error, val_acc = eval_epoch(model, valid_loaders, epoch)
+        val_loss, val_acc = eval_epoch(model, valid_loaders, epoch)
 
-        print("epoch {}/{}, train_error={:.2f}, train_acc={:.2f}, val_error={:.2f}, val_acc={:.2f}".format(epoch,
-                                    ARGS.epochs, train_error, train_acc, val_error, val_acc))
+        print("epoch {}/{}, train_loss={:.2f}, train_acc={:.2f}, val_loss={:.2f}, val_acc={:.2f}".format(epoch+1,
+                                    ARGS.epochs, train_loss, train_acc, val_loss, val_acc))
 
-        valid_data = concat_datasets(*valid_loaders, proportion_a=0.5)
+        valid_data = concat_datasets(valid_loaders.faces.dataset, valid_loaders.nonfaces.dataset, proportion_a=0.5)
+        # print(valid_data)
         print_reconstruction(model, valid_data, epoch)
-    return
+
+        with open("results/"+FOLDER_NAME + "/training_results.csv", "a") as write_file:
+            s = "{},{},{},{},{}\n".format(epoch, train_loss, val_loss, train_acc, val_acc)
+            print("S:", s)
+            write_file.write(s)
+
+        torch.save(model.state_dict(), "results/"+FOLDER_NAME+"/model.pt".format(epoch))
 
 if __name__ == "__main__":
     print("start training")
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', default=128, type=int,
+    parser.add_argument('--batch_size', default=256, type=int,
                         help='size of batch')
     parser.add_argument('--epochs', default=10, type=int,
                         help='max number of epochs')
@@ -346,11 +360,35 @@ if __name__ == "__main__":
                         help='dimensionality of latent space')
     parser.add_argument('--alpha', default=0.0, type=float,
                         help='importance of debiasing')
-    parser.add_argument('--dataset_size', default=10000, type=int,
+    parser.add_argument('--dataset_size', default=-1, type=int,
                         help='total size of database')
     parser.add_argument('--eval_freq', default=5, type=int,
                         help='total size of database')
+    parser.add_argument('--debias_type', default='none', type=str,
+                        help='type of debiasing used')
 
     ARGS = parser.parse_args()
+
+    print("ARGS => batch_size:{}, epochs:{}, z_dim:{}, alpha:{}, dataset_size:{}, eval_freq:{}, debiasing type:{}".format(ARGS.batch_size,
+                                ARGS.epochs, ARGS.zdim, ARGS.alpha, ARGS.dataset_size, ARGS.eval_freq, ARGS.debias_type))
+
+    FOLDER_NAME = "{}".format(datetime.datetime.now().strftime("%d_%m_%Y---%H_%M_%S"))
+
+    os.makedirs("results/"+ FOLDER_NAME + '/best_and_worst')
+    os.makedirs("results/"+ FOLDER_NAME + '/bias_probs')
+    os.makedirs("results/"+ FOLDER_NAME + '/reconstructions')
+
+    with open("results/" + FOLDER_NAME + "/flags.txt", "w") as write_file:
+        write_file.write(f"zdim = {ARGS.zdim}\n")
+        write_file.write(f"alpha = {ARGS.alpha}\n")
+        write_file.write(f"epochs = {ARGS.epochs}\n")
+        write_file.write(f"batch size = {ARGS.batch_size}\n")
+        write_file.write(f"eval frequency = {ARGS.eval_freq}\n")
+        write_file.write(f"dataset size = {ARGS.dataset_size}\n")
+        write_file.write(f"debiasing type = {ARGS.debias_type}\n")
+
+    with open("results/" + FOLDER_NAME + "/training_results.csv", "w") as write_file:
+        write_file.write("epoch,train_loss,valid_loss,train_acc,valid_acc\n")
+
 
     main()

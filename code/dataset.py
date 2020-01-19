@@ -31,12 +31,16 @@ def split_dataset(dataset, train_size: float, max_images: Optional[int] = None):
 
     return train_data, valid_data
 
-def concat_datasets(dataset_a, dataset_b, proportion_a):
-    proportion_b: float = 1 - proportion_a
+def concat_datasets(dataset_a, dataset_b, proportion_a: Optional[float] = None):
+    if proportion_a:
+        proportion_b = 1 - proportion_a
+        # Calculate amount of dataset
+        nr_dataset_a: int = int(np.floor(proportion_a * len(dataset_a)))
+        nr_dataset_b: int = int(np.floor(proportion_b * len(dataset_b)))
 
-    # Calculate amount of dataset
-    nr_dataset_a: int = int(np.floor(proportion_a * len(dataset_a)))
-    nr_dataset_b: int = int(np.floor(proportion_b * len(dataset_b)))
+    else:
+        nr_dataset_a = len(dataset_a)
+        nr_dataset_b = len(dataset_b)
 
     # Subsample the datasets
     sampled_dataset_a = Subset(dataset_a, np.arange(nr_dataset_a))
@@ -64,8 +68,8 @@ def make_train_and_valid_loaders(
     imagenet_train, imagenet_valid = split_dataset(imagenet_dataset, train_size, nr_images)
 
     # Nonfaces loaders
-    train_nonfaces_loader: DataLoader = DataLoader(imagenet_train, batch_size=batch_size, shuffle=shuffle)
-    valid_nonfaces_loader: DataLoader = DataLoader(imagenet_valid, batch_size=batch_size, shuffle=False)
+    train_nonfaces_loader: DataLoader = DataLoader(imagenet_train, batch_size=batch_size, shuffle=shuffle, num_workers=5)
+    valid_nonfaces_loader: DataLoader = DataLoader(imagenet_valid, batch_size=batch_size, shuffle=False, num_workers=5)
 
     # Init some weights
     init_weights = torch.rand(len(celeb_train)).tolist()
@@ -84,8 +88,8 @@ def make_train_and_valid_loaders(
     train_sampler = weights_sampler_train if enable_debias else random_train_sampler
 
     # Define the face loaders
-    train_faces_loader: DataLoader = DataLoader(celeb_train, sampler=train_sampler, batch_size=batch_size)
-    valid_faces_loader: DataLoader = DataLoader(celeb_valid, batch_size=batch_size, shuffle=shuffle)
+    train_faces_loader: DataLoader = DataLoader(celeb_train, sampler=train_sampler, batch_size=batch_size, num_workers=5)
+    valid_faces_loader: DataLoader = DataLoader(celeb_valid, batch_size=batch_size, shuffle=shuffle, num_workers=5)
 
     train_loaders: DataLoaderTuple = DataLoaderTuple(train_faces_loader, train_nonfaces_loader)
     valid_loaders: DataLoaderTuple = DataLoaderTuple(valid_faces_loader, valid_nonfaces_loader)
@@ -101,7 +105,7 @@ def make_eval_loader(
 ):
 
     # Define faces dataset
-    pbb_dataset = PBBDataset(
+    pbb_dataset = PPBDataset(
         path_to_images=config.path_to_eval_face_images,
         path_to_metadata=config.path_to_eval_metadata,
         filter_excl_country=filter_exclude_country,
@@ -114,11 +118,18 @@ def make_eval_loader(
         path_to_images=config.path_to_eval_nonface_images
     )
 
+    imagenet_dataset = subsample_dataset(imagenet_dataset, len(pbb_dataset))
+
     # Concat and wrap with loader
-    total_dataset = concat_datasets(pbb_dataset, imagenet_dataset, proportion_faces)
-    data_loader = DataLoader(total_dataset, batch_size, shuffle=True)
+    total_dataset = concat_datasets(pbb_dataset, imagenet_dataset, None)
+    data_loader = DataLoader(total_dataset, batch_size, shuffle=True, num_workers=5)
 
     return data_loader
+
+def subsample_dataset(dataset: Dataset, nr_subsamples: int):
+    idxs = np.arange(nr_subsamples)
+    return Subset(dataset, idxs)
+
 
 def sample_dataset(dataset: Dataset, nr_samples: int):
     max_nr_items: int = min(nr_samples, len(dataset))
@@ -126,11 +137,19 @@ def sample_dataset(dataset: Dataset, nr_samples: int):
 
     return torch.stack([dataset[idx][0] for idx in idxs])
 
+def sample_idxs_from_loaders(idxs, data_loaders, label):
+    if label == 1:
+        dataset = data_loaders.faces.dataset.dataset
+    else:
+        dataset = data_loaders.nonfaces.dataset.dataset
+
+    return torch.stack([dataset[idx.item()][0] for idx in idxs])
+
 def sample_idxs_from_loader(idxs, data_loader, label):
     if label == 1:
         dataset = data_loader.dataset.dataset
     else:
-        dataset = data_loader.dataset.datasets[1].dataset.dataset
+        dataset = data_loader.dataset.dataset
 
     return torch.stack([dataset[idx.item()][0] for idx in idxs])
 
