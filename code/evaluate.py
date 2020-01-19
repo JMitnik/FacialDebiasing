@@ -33,27 +33,31 @@ def eval_model(model, data_loader):
     with torch.no_grad():
         for i, batch in enumerate(data_loader):
             print(f"batch number {i}")
-            images, _, _ = batch
-
-            if len(images.shape) == 5:
-                images = images.squeeze(dim=0)
-
-            batch_size = images.size(0)
-
-            images = images.to(config.device)
-            labels = torch.ones(batch_size, dtype=torch.long).to(config.device)
-            pred, loss = model.forward(images, labels)
-
-            loss = loss/batch_size
-
-            avg_loss += loss.item()
-
-            all_labels = torch.cat((all_labels, labels))
-            all_preds = torch.cat((all_preds, pred))
-
             count += 1
-            if (pred > 0).any():
-                correct_count += 1
+            images_list, _, _ = batch
+
+            for images in images_list:
+                if len(images.shape) == 5:
+                    images = images.squeeze(dim=0)
+
+                batch_size = images.size(0)
+
+                images = images.to(config.device)
+                labels = torch.ones(batch_size, dtype=torch.long).to(config.device)
+
+                pred, loss = model.forward(images, labels)
+
+                loss = loss/batch_size
+
+                avg_loss += loss.item()
+
+                all_labels = torch.cat((all_labels, labels))
+                all_preds = torch.cat((all_preds, pred))
+
+                
+                if (pred > 0).any():
+                    correct_count += 1
+                    break
 
     print(f"Amount of labels:{count}, Correct labels:{correct_count}")
 
