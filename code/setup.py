@@ -65,7 +65,7 @@ class Config(NamedTuple):
     # Z dimension
     zdim: int = ARGS.zdim or 200
     # Alpha value
-    alpha: float = ARGS.alpha or 0.0
+    alpha: float = ARGS.alpha or 0.01
     # Dataset size
     dataset_size: int = ARGS.dataset_size or -1
     # Eval frequence
