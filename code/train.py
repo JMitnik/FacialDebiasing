@@ -18,7 +18,7 @@ import setup
 from setup import config
 
 from torch.utils.data import ConcatDataset, DataLoader
-from dataset import make_train_and_valid_loaders, make_hist_loader, concat_datasets
+from dataset import concat_datasets, make_train_and_valid_loaders, sample_dataset, sample_idxs_from_loader, sample_idxs_from_loaders, make_hist_loader
 from datasets.generic import DataLoaderTuple
 
 from torchvision.utils import make_grid

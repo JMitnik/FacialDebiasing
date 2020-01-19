@@ -72,7 +72,7 @@ def main():
 
         loss, acc = eval_model(model, eval_loader)
 
-        print(f"{name_list[i]} => loss:{loss}, acc:{acc}")
+        print(f"{name_list[i]} => loss:{loss:.1f}, acc:{acc:.3f}")
 
     return
 
