@@ -68,8 +68,8 @@ def make_train_and_valid_loaders(
     imagenet_train, imagenet_valid = split_dataset(imagenet_dataset, train_size, nr_images)
 
     # Nonfaces loaders
-    train_nonfaces_loader: DataLoader = DataLoader(imagenet_train, batch_size=batch_size, shuffle=shuffle, num_workers=config.num_workers)
-    valid_nonfaces_loader: DataLoader = DataLoader(imagenet_valid, batch_size=batch_size, shuffle=False, num_workers=config.num_workers)
+    train_nonfaces_loader: DataLoader = DataLoader(imagenet_train, batch_size=int(batch_size / 2), shuffle=shuffle, num_workers=config.num_workers)
+    valid_nonfaces_loader: DataLoader = DataLoader(imagenet_valid, batch_size=int(batch_size / 2), shuffle=False, num_workers=config.num_workers)
 
     # Init some weights
     init_weights = torch.rand(len(celeb_train)).tolist()
@@ -81,8 +81,8 @@ def make_train_and_valid_loaders(
     train_sampler = weights_sampler_train if enable_debias else random_train_sampler
 
     # Define the face loaders
-    train_faces_loader: DataLoader = DataLoader(celeb_train, sampler=train_sampler, batch_size=batch_size, num_workers=config.num_workers)
-    valid_faces_loader: DataLoader = DataLoader(celeb_valid, batch_size=batch_size, shuffle=shuffle, num_workers=config.num_workers)
+    train_faces_loader: DataLoader = DataLoader(celeb_train, sampler=train_sampler, batch_size=int(batch_size / 2), num_workers=config.num_workers)
+    valid_faces_loader: DataLoader = DataLoader(celeb_valid, batch_size=int(batch_size / 2), shuffle=shuffle, num_workers=config.num_workers)
 
     train_loaders: DataLoaderTuple = DataLoaderTuple(train_faces_loader, train_nonfaces_loader)
     valid_loaders: DataLoaderTuple = DataLoaderTuple(valid_faces_loader, valid_nonfaces_loader)
@@ -103,11 +103,12 @@ def make_eval_loader(
         path_to_metadata=config.path_to_eval_metadata,
         filter_excl_country=filter_exclude_country,
         filter_excl_gender=filter_exclude_gender,
-        filter_excl_skin_color=filter_exclude_skin_color
+        filter_excl_skin_color=filter_exclude_skin_color,
+        nr_sub_images=config.batch_size
     )
 
     # Concat and wrap with loader
-    data_loader = DataLoader(pbb_dataset, batch_size, shuffle=True, num_workers=config.num_workers)
+    data_loader = DataLoader(pbb_dataset, batch_size=1, shuffle=True, num_workers=config.num_workers)
 
     return data_loader
 

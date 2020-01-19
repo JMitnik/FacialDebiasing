@@ -57,7 +57,7 @@ def update_histogram(model, data_loader, epoch):
         elif config.debias_type == "our":
             probs = model.get_histo_our()
         else:
-            raise Exception("No coorrect debias method given. choos \"base\" or \"our\"")
+            raise Exception("No correct debias method given. choose \"base\" or \"our\"")
 
     utils.visualize_bias(probs, data_loader, all_labels, all_index, epoch)
 
