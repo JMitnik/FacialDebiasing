@@ -59,12 +59,16 @@ def main():
     name_list = ["all", "dark man", "dark female", "light man", "light female"]
 
     # Load model
-    model = vae_model.Db_vae(z_dim=ARGS.zdim, device=config.device).to(config.device)
-    model.load_state_dict(torch.load(f"results/{ARGS.adress}/model.pt"))
+    model = vae_model.Db_vae(z_dim=config.zdim, device=config.device).to(config.device)
+
+    if not config.path_to_model:
+        raise Exception('Load up a model using --path_to_model')
+
+    model.load_state_dict(torch.load(f"results/{config.path_to_model}/model.pt"))
     model.eval()
 
     for i in range(5):
-        eval_loader: DataLoader = make_eval_loader(batch_size=ARGS.batch_size, filter_exclude_skin_color=skin_list[i], filter_exclude_gender=gender_list[i])
+        eval_loader: DataLoader = make_eval_loader(batch_size=config.batch_size, filter_exclude_skin_color=skin_list[i], filter_exclude_gender=gender_list[i])
 
         loss, acc = eval_model(model, eval_loader)
 
@@ -74,15 +78,5 @@ def main():
 
 if __name__ == "__main__":
     print("start evaluation")
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', default=256, type=int,
-                        help='dimensionality of latent space')
-    parser.add_argument('--zdim', default=20, type=int,
-                        help='dimensionality of latent space')
-    parser.add_argument("--path_to_model", type=str,
-                        help='Path to stored model')
-
-    ARGS = parser.parse_args()
 
     main()
