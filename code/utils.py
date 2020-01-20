@@ -97,7 +97,6 @@ def print_reconstruction(model, data, epoch, n_rows=4):
 
     plt.close()
 
-
 def concat_batches(batch_a, batch_b):
     # TODO: Merge by interleaving the batches
     images = torch.cat((batch_a[0], batch_b[0]), 0)
