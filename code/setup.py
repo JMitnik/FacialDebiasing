@@ -98,14 +98,14 @@ def init_trainining_results():
     if not os.path.exists("results"):
         os.makedirs("results")
 
-    os.makedirs("results/"+ FOLDER_NAME + '/best_and_worst')
-    os.makedirs("results/"+ FOLDER_NAME + '/bias_probs')
-    os.makedirs("results/"+ FOLDER_NAME + '/reconstructions')
+    os.makedirs("results/"+ config.run_folder + '/best_and_worst')
+    os.makedirs("results/"+ config.run_folder + '/bias_probs')
+    os.makedirs("results/"+ config.run_folder + '/reconstructions')
 
     if config.debug_mode:
         os.makedirs(f"results/{config.run_folder}/debug")
 
-    with open("results/" + FOLDER_NAME + "/training_results.csv", "a+") as write_file:
+    with open("results/" + config.run_folder + "/training_results.csv", "a+") as write_file:
         write_file.write("epoch,train_loss,valid_loss,train_acc,valid_acc\n")
 
 print(f"Config => {config}")

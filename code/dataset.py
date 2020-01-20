@@ -1,4 +1,4 @@
-from datasets.h5 import H5CelebA
+from datasets.h5celeba import H5CelebA
 from datasets.h5imagenet import H5Imagenet
 import torch
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, WeightedRandomSampler, BatchSampler, SequentialSampler

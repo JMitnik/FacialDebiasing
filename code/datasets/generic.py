@@ -99,4 +99,4 @@ def slide_single_window_over_img(
 def visualize_tensor(img_tensor: torch.Tensor):
     pil_transformer = transforms.ToPILImage()
 
-    return pil_transformer(img_tensor)
+    pil_transformer(img_tensor).show()
