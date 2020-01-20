@@ -90,7 +90,7 @@ def train_epoch(model, data_loaders: DataLoaderTuple, optimizer):
         pred, loss = model.forward(images, labels)
 
         optimizer.zero_grad()
-        loss = loss/batch_size
+        loss = loss.mean()
 
         # calculate the gradients and clip them at 5
         loss.backward()
@@ -135,7 +135,7 @@ def eval_epoch(model, data_loaders: DataLoaderTuple, epoch):
             idxs = idxs.to(config.device)
             pred, loss = model.forward(images, labels)
 
-            loss = loss/batch_size
+            loss = loss.mean()
             acc = utils.calculate_accuracy(labels, pred)
 
             avg_loss += loss.item()
@@ -164,7 +164,7 @@ def main():
     )
 
     # Initialize model
-    model = vae_model.Db_vae(z_dim=config.zdim, device=config.device, alpha=config.aplha).to(config.device)
+    model = vae_model.Db_vae(z_dim=config.zdim, device=config.device, alpha=config.alpha).to(config.device)
 
     # Initialize optimizer
     optimizer = torch.optim.Adam(model.parameters())

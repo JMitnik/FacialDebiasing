@@ -128,7 +128,7 @@ class Db_vae(nn.Module):
 
         self.c1 = 1
         self.c2 = 1
-        self.c3 = 1
+        self.c3 = 0.0005
 
         self.num_bins = 500
         self.min_val = -15
@@ -150,7 +150,7 @@ class Db_vae(nn.Module):
         # Acc of the classfication should be added properly - Requires some
         # extra target input
 
-        loss_class = F.binary_cross_entropy_with_logits(pred, labels.float(), reduction='sum')
+        loss_class = F.binary_cross_entropy_with_logits(pred, labels.float())
 
         slice_indices = labels == 1
 
@@ -172,11 +172,12 @@ class Db_vae(nn.Module):
 
             # calculate VAE losses
             # loss_recon = F.l1_loss(res, face_images, reduction='sum')
-            loss_recon = ((face_images - res)**2).sum()
+            loss_recon = ((face_images - res)**2)
+            loss_recon = loss_recon.view(loss_recon.shape[0],-1).mean(1)
 
 
             loss_kl = torch.distributions.kl.kl_divergence(dist, self.target_dist)
-            loss_kl = loss_kl.sum()
+            loss_kl = loss_kl.view(loss_kl.shape[0],-1).sum(1)
 
             # calculate total loss
             loss_total = self.c1 * loss_class + self.c2 * loss_recon + self.c3 * loss_kl
