@@ -32,7 +32,7 @@ def eval_model(model, data_loader):
 
     with torch.no_grad():
         for i, batch in enumerate(data_loader):
-            print(f"batch number {i}")
+            # print(f"batch number {i}")
             count += 1
             images_list, _, _ = batch
 
@@ -128,8 +128,8 @@ def main():
         losses.append(loss)
         accs.append(acc)
 
-    print(f"Losses => all:{losses[0]}, dark male: {losses[1]}, dark female: {losses[1]}, white male: {losses[1]}, white female: {losses[4]}")
-    print(f"Accuracy => all:{accs[0]}, dark male: {accs[1]}, dark female: {accs[1]}, white male: {accs[1]}, white female: {accs[4]}")
+    print(f"Losses => all:{losses[0]:.3f}, dark male: {losses[1]:.3f}, dark female: {losses[2]:.3f}, white male: {losses[3]:.3f}, white female: {losses[4]:.3f}")
+    print(f"Accuracy => all:{accs[0]:.3f}, dark male: {accs[1]:.3f}, dark female: {accs[2]:.3f}, white male: {accs[3]:.3f}, white female: {accs[4]:.3f}")
     return
 
 if __name__ == "__main__":
