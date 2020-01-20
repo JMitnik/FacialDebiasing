@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import vae_model
 import utils
 import setup
-from setup import config
+from setup import config, init_trainining_results
 
 from torch.utils.data import ConcatDataset, DataLoader
 from dataset import concat_datasets, make_train_and_valid_loaders, sample_dataset, sample_idxs_from_loader, sample_idxs_from_loaders, make_hist_loader
@@ -164,7 +164,7 @@ def main():
     )
 
     # Initialize model
-    model = vae_model.Db_vae(z_dim=config.zdim, device=config.device, alpha=config.aplha).to(config.device)
+    model = vae_model.Db_vae(z_dim=config.zdim, device=config.device, alpha=config.alpha).to(config.device)
 
     # Initialize optimizer
     optimizer = torch.optim.Adam(model.parameters())
@@ -197,4 +197,5 @@ def main():
         torch.save(model.state_dict(), "results/"+config.run_folder+"/model.pt".format(epoch))
 
 if __name__ == "__main__":
+    init_trainining_results()
     main()
