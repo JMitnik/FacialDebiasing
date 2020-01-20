@@ -64,34 +64,48 @@ def eval_model(model, data_loader):
     return avg_loss/(count+1), correct_count/count
 
 def interpolate_images(model, amount):
-    eval_loader: DataLoader = make_eval_loader(batch_size=2)
+    eval_loader: DataLoader = make_eval_loader(
+        batch_size=config.batch_size,
+        nr_windows=config.eval_nr_windows
+    )
 
+    image_1 = []
+    image_2 = []
     for i, batch in enumerate(eval_loader):
-        images, labels, _ = batch
+        images_list, _, _ = batch
 
-        images = images.to(config.device)
-        labels = labels.to(config.device)
-        recon_images = model.interpolate(images, amount)
+        images = images_list[-1].squeeze()
 
-        fig=plt.figure(figsize=(16, 16))
+        if i == 0:
+            image_1 = images[-1]
 
-        ax = fig.add_subplot(2, 2, 1)
-        grid = make_grid(images[0,:,:,:].view(1,3,64,64), 1)
-        plt.imshow(grid.permute(1,2,0).cpu())
-        utils.remove_frame(plt)
+        if i == 1:
+            image_2 = images[-1]
 
-        ax = fig.add_subplot(2, 2, 2)
-        grid = make_grid(images[1,:,:,:].view(1,3,64,64), 1)
-        plt.imshow(grid.permute(1,2,0).cpu())
-        utils.remove_frame(plt)
+        if i > 1:
+            break
+    
+    images = torch.stack((image_1, image_2)).to(config.device)
+    recon_images = model.interpolate(images, amount)
 
-        ax = fig.add_subplot(2, 1, 2)
-        grid = make_grid(recon_images.reshape(amount,3,64,64), amount)
-        plt.imshow(grid.permute(1,2,0).cpu())
-        utils.remove_frame(plt)
-        
-        plt.show()
-        break
+    fig=plt.figure(figsize=(16, 16))
+
+    ax = fig.add_subplot(2, 2, 1)
+    grid = make_grid(images[0,:,:,:].view(1,3,64,64), 1)
+    plt.imshow(grid.permute(1,2,0).cpu())
+    utils.remove_frame(plt)
+
+    ax = fig.add_subplot(2, 2, 2)
+    grid = make_grid(images[1,:,:,:].view(1,3,64,64), 1)
+    plt.imshow(grid.permute(1,2,0).cpu())
+    utils.remove_frame(plt)
+
+    ax = fig.add_subplot(2, 1, 2)
+    grid = make_grid(recon_images.reshape(amount,3,64,64), amount)
+    plt.imshow(grid.permute(1,2,0).cpu())
+    utils.remove_frame(plt)
+    
+    plt.show()
 
 
 
@@ -109,7 +123,9 @@ def main():
     model.load_state_dict(torch.load(f"results/{config.path_to_model}/model.pt"))
     model.eval()
 
-    # interpolate_images(model, 20)
+    interpolate_images(model, 20)
+
+    return
     
     losses = []
     accs = []
