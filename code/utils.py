@@ -139,3 +139,13 @@ def visualize_bias(probs, data_loader, all_labels, all_index, epoch, n_rows=3):
 
     fig.savefig('results/{}/bias_probs/epoch={}'.format(config.run_folder, epoch), bbox_inches='tight')
     plt.close()
+
+
+def write_hist(hist, epoch: int = 0):
+    if config.debug_mode:
+        print("Writing histogram to file")
+
+        with open(f"results/{config.run_folder}/debug/hist.txt", "a+") as write_file:
+            write_file.write(f"EPOCH: {epoch}\n")
+            write_file.write(f"{str(hist)}\n")
+            write_file.write(f"\n\n\n")

@@ -6,27 +6,17 @@ from typing import Tuple
 
 # Import external
 import torch
-import torch.functional as F
-import numpy as np
-from torchvision.utils import make_grid
-import matplotlib.pyplot as plt
 
 # Import project-based
 import vae_model
 import utils
-import setup
 from setup import config, init_trainining_results
 
-from torch.utils.data import ConcatDataset, DataLoader
-from dataset import concat_datasets, make_train_and_valid_loaders, sample_dataset, sample_idxs_from_loader, sample_idxs_from_loaders, make_hist_loader
+from dataset import concat_datasets, make_train_and_valid_loaders, make_hist_loader
 from datasets.generic import DataLoaderTuple
 
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
-
-import gc
-from collections import Counter
-import os
 
 def update_histogram(model, data_loader, epoch):
     # reset the means and histograms
@@ -178,6 +168,7 @@ def main():
         if config.debias_type != 'none':
             hist_loader = make_hist_loader(train_loaders.faces.dataset, config.batch_size)
             hist = update_histogram(model, hist_loader, epoch)
+            utils.write_hist(hist, epoch)
 
             train_loaders.faces.sampler.weights = hist
 

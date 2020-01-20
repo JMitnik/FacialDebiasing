@@ -34,6 +34,9 @@ parser.add_argument("--num_workers", type=int,
                         help='Path to stored model')
 parser.add_argument("--debug_mode", type=bool,
                         help='Debug mode')
+parser.add_argument("--use_h5", type=bool,
+                        help='Use h5')
+
 ARGS = parser.parse_args()
 
 num_workers = 5 if ARGS.num_workers is None else ARGS.num_workers
@@ -53,6 +56,8 @@ class Config(NamedTuple):
     path_to_eval_nonface_images: str = 'data/eval_imagenet'
     # Path to stored model
     path_to_model: Optional[str] = ARGS.path_to_model or None
+    # Path to h5
+    path_to_h5_train: str = 'data/h5_train/train_face.h5'
     # Type of debiasing used
     debias_type: str = ARGS.debias_type or 'none'
     # Random seed for reproducability
@@ -85,29 +90,26 @@ class Config(NamedTuple):
     eval_min_size: int = 30
     # Evaluation window maximum
     eval_max_size: int = 64
+    # Uses h5 instead of the imagenet files
+    use_h5: bool = False if ARGS.use_h5 is None else ARGS.use_h5
+    # Debug mode prints several statistics
+    debug_mode: bool = False if ARGS.debug_mode is None else ARGS.debug_mode
 
 config = Config()
-
 
 def init_trainining_results():
     # Write run-folder name
     if not os.path.exists("results"):
         os.makedirs("results")
 
-    os.makedirs("results/"+ FOLDER_NAME + '/best_and_worst')
-    os.makedirs("results/"+ FOLDER_NAME + '/bias_probs')
-    os.makedirs("results/"+ FOLDER_NAME + '/reconstructions')
+    os.makedirs("results/"+ config.run_folder + '/best_and_worst')
+    os.makedirs("results/"+ config.run_folder + '/bias_probs')
+    os.makedirs("results/"+ config.run_folder + '/reconstructions')
 
-    with open("results/" + FOLDER_NAME + "/flags.txt", "w") as write_file:
-        write_file.write(f"zdim = {config.zdim}\n")
-        write_file.write(f"alpha = {config.alpha}\n")
-        write_file.write(f"epochs = {config.epochs}\n")
-        write_file.write(f"batch size = {config.batch_size}\n")
-        write_file.write(f"eval frequency = {config.eval_freq}\n")
-        write_file.write(f"dataset size = {config.dataset_size}\n")
-        write_file.write(f"debiasing type = {config.debias_type}\n")
+    if config.debug_mode:
+        os.makedirs(f"results/{config.run_folder}/debug")
 
-    with open("results/" + FOLDER_NAME + "/training_results.csv", "w") as write_file:
+    with open("results/" + config.run_folder + "/training_results.csv", "a+") as write_file:
         write_file.write("epoch,train_loss,valid_loss,train_acc,valid_acc\n")
 
 print(f"Config => {config}")
