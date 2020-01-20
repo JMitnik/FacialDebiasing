@@ -128,7 +128,7 @@ class Db_vae(nn.Module):
 
         self.c1 = 1
         self.c2 = 1
-        self.c3 = 0.0005
+        self.c3 = 0.1
 
         self.num_bins = 500
         self.min_val = -15
@@ -167,7 +167,7 @@ class Db_vae(nn.Module):
         loss_recon = loss_recon.view(loss_recon.shape[0],-1).mean(1)
 
         loss_kl = torch.distributions.kl.kl_divergence(dist, self.target_dist)
-        loss_kl = loss_kl.view(loss_kl.shape[0],-1).sum(1)
+        loss_kl = loss_kl.view(loss_kl.shape[0],-1).mean(1)
 
         loss_vae = self.c2 * loss_recon + self.c3 * loss_kl
         slicer = labels == 0
@@ -224,7 +224,7 @@ class Db_vae(nn.Module):
         for i in range(self.z_dim):
             dist = self.means[:,i].cpu().numpy()
 
-            hist, bins = np.histogram(dist, density=True, bins=self.num_bins)
+            hist, bins = np.histogram(dist, density=True, bins=10)
 
             bins[0] = -float('inf')
             bins[-1] = float('inf')
