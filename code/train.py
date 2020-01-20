@@ -30,6 +30,8 @@ import os
 
 def update_histogram(model, data_loader, epoch):
     # reset the means and histograms
+
+    print(f"update weight histogram using method: {config.debias_type}")
     model.hist = torch.ones((config.zdim, model.num_bins)).to(config.device)
     model.means = torch.Tensor().to(config.device)
 
