@@ -128,7 +128,7 @@ class Db_vae(nn.Module):
 
         self.c1 = 1
         self.c2 = 1
-        self.c3 = 1
+        self.c3 = 0.1
 
         self.num_bins = 500
         self.min_val = -15
@@ -150,41 +150,31 @@ class Db_vae(nn.Module):
         # Acc of the classfication should be added properly - Requires some
         # extra target input
 
-        loss_class = F.binary_cross_entropy_with_logits(pred, labels.float(), reduction='sum')
+        loss_class = F.binary_cross_entropy_with_logits(pred, labels.float(), reduction='none')
+        
+        # Get single samples from the distributions with reparametrisation trick
+        dist = torch.distributions.normal.Normal(mean, std)
+        z = dist.rsample().to(self.device)
 
-        slice_indices = labels == 1
+        res = self.decoder(z)
 
-        if labels[slice_indices].size(0) > 0:
-            # Slice the face images from the batch
-            face_images = images[slice_indices]
-            face_mean = mean[slice_indices]
-            face_std = std[slice_indices]
+        # TODO:
+        # Change losses of VAE part only towards those of the actual faces.
+        # Also shouldnt feed those to the decoder, waste of time
 
-            # Get single samples from the distributions with reparametrisation trick
-            dist = torch.distributions.normal.Normal(face_mean, face_std)
-            z = dist.rsample().to(self.device)
+        # calculate VAE losses
+        loss_recon = (images - res)**2
+        loss_recon = loss_recon.view(loss_recon.shape[0],-1).mean(1)
 
-            res = self.decoder(z)
+        loss_kl = torch.distributions.kl.kl_divergence(dist, self.target_dist)
+        loss_kl = loss_kl.view(loss_kl.shape[0],-1).mean(1)
 
-            # TODO:
-            # Change losses of VAE part only towards those of the actual faces.
-            # Also shouldnt feed those to the decoder, waste of time
+        loss_vae = self.c2 * loss_recon + self.c3 * loss_kl
+        slicer = labels == 0
+        loss_vae[slicer] = 0
 
-            # calculate VAE losses
-            # loss_recon = F.l1_loss(res, face_images, reduction='sum')
-            loss_recon = ((face_images - res)**2).sum()
-
-
-            loss_kl = torch.distributions.kl.kl_divergence(dist, self.target_dist)
-            loss_kl = loss_kl.sum()
-
-            # calculate total loss
-            loss_total = self.c1 * loss_class + self.c2 * loss_recon + self.c3 * loss_kl
-
-        else:
-            # OPTIONAL:
-            # multiply by c1
-            loss_total = loss_class * self.c1
+        # calculate total loss
+        loss_total = self.c1 * loss_class + loss_vae
 
         return pred, loss_total
 
@@ -234,7 +224,7 @@ class Db_vae(nn.Module):
         for i in range(self.z_dim):
             dist = self.means[:,i].cpu().numpy()
 
-            hist, bins = np.histogram(dist, density=True, bins=self.num_bins)
+            hist, bins = np.histogram(dist, density=True, bins=10)
 
             bins[0] = -float('inf')
             bins[-1] = float('inf')

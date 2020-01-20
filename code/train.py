@@ -30,6 +30,8 @@ import os
 
 def update_histogram(model, data_loader, epoch):
     # reset the means and histograms
+
+    print(f"update weight histogram using method: {config.debias_type}")
     model.hist = torch.ones((config.zdim, model.num_bins)).to(config.device)
     model.means = torch.Tensor().to(config.device)
 
@@ -90,7 +92,7 @@ def train_epoch(model, data_loaders: DataLoaderTuple, optimizer):
         pred, loss = model.forward(images, labels)
 
         optimizer.zero_grad()
-        loss = loss/batch_size
+        loss = loss.mean()
 
         # calculate the gradients and clip them at 5
         loss.backward()
@@ -135,7 +137,7 @@ def eval_epoch(model, data_loaders: DataLoaderTuple, epoch):
             idxs = idxs.to(config.device)
             pred, loss = model.forward(images, labels)
 
-            loss = loss/batch_size
+            loss = loss.mean()
             acc = utils.calculate_accuracy(labels, pred)
 
             avg_loss += loss.item()
