@@ -83,25 +83,26 @@ class Config(NamedTuple):
 
 config = Config()
 
-# Write run-folder name
-if not os.path.exists("results"):
-    os.makedirs("results")
 
-os.makedirs("results/"+ FOLDER_NAME + '/best_and_worst')
-os.makedirs("results/"+ FOLDER_NAME + '/bias_probs')
-os.makedirs("results/"+ FOLDER_NAME + '/reconstructions')
+def init_trainining_results_settings():
+    # Write run-folder name
+    if not os.path.exists("results"):
+        os.makedirs("results")
 
-with open("results/" + FOLDER_NAME + "/flags.txt", "w") as write_file:
-    write_file.write(f"zdim = {config.zdim}\n")
-    write_file.write(f"alpha = {config.alpha}\n")
-    write_file.write(f"epochs = {config.epochs}\n")
-    write_file.write(f"batch size = {config.batch_size}\n")
-    write_file.write(f"eval frequency = {config.eval_freq}\n")
-    write_file.write(f"dataset size = {config.dataset_size}\n")
-    write_file.write(f"debiasing type = {config.debias_type}\n")
+    os.makedirs("results/"+ FOLDER_NAME + '/best_and_worst')
+    os.makedirs("results/"+ FOLDER_NAME + '/bias_probs')
+    os.makedirs("results/"+ FOLDER_NAME + '/reconstructions')
 
-with open("results/" + FOLDER_NAME + "/training_results.csv", "w") as write_file:
-    write_file.write("epoch,train_loss,valid_loss,train_acc,valid_acc\n")
+    with open("results/" + FOLDER_NAME + "/flags.txt", "w") as write_file:
+        write_file.write(f"zdim = {config.zdim}\n")
+        write_file.write(f"alpha = {config.alpha}\n")
+        write_file.write(f"epochs = {config.epochs}\n")
+        write_file.write(f"batch size = {config.batch_size}\n")
+        write_file.write(f"eval frequency = {config.eval_freq}\n")
+        write_file.write(f"dataset size = {config.dataset_size}\n")
+        write_file.write(f"debiasing type = {config.debias_type}\n")
 
+    with open("results/" + FOLDER_NAME + "/training_results.csv", "w") as write_file:
+        write_file.write("epoch,train_loss,valid_loss,train_acc,valid_acc\n")
 
 print(f"Config => {config}")
