@@ -179,10 +179,34 @@ class Db_vae(nn.Module):
         return pred, loss_total
 
 
-    def interpolate(self, img_1, img_2):
-        _, mean_1, std_1 = self.encoder(img_1.reshape(1,3,64,64))
-        _, mean_2, std_2 = self.encoder(img_2.reshape(1,3,64,64))
+    def interpolate(self, images, amount):
+        with torch.no_grad():
+            _, mean, std = self.encoder(images)
 
+            mean_1, std_1 = mean[0,:], std[0,:]
+            mean_2, std_2 = mean[1,:], std[1,:]
+
+            all_mean  = torch.Tensor([]).to(self.device)
+            all_std = torch.Tensor([]).to(self.device)
+
+            diff_mean = mean_1 - mean_2
+            diff_std = std_1 = std_2
+
+            steps_mean = diff_mean / (amount-1)
+            steps_std = diff_std / (amount-1)
+
+            for i in range(amount):
+                all_mean = torch.cat((all_mean, mean_1 - steps_mean*i))
+                all_std = torch.cat((all_std, std_1 - steps_std*i))
+
+            all_mean = all_mean.view(amount, -1)
+            all_std = all_std.view(amount, -1)
+            dist = torch.distributions.normal.Normal(all_mean, all_std)
+            z = dist.rsample().to(self.device)
+
+            recon_images = self.decoder(z)
+
+        return recon_images
 
     def build_means(self, input):
         _, mean, log_std = self.encoder(input)
