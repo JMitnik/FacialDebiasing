@@ -1,8 +1,11 @@
+from datasets.h5 import H5CelebA
+from datasets.h5imagenet import H5Imagenet
 import torch
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, WeightedRandomSampler, BatchSampler, SequentialSampler
 from torch.utils.data.dataset import Subset
 from torch.utils.data.sampler import RandomSampler
 from setup import config
+import h5py
 import numpy as np
 from typing import Optional, List, NamedTuple, Union
 
@@ -48,6 +51,23 @@ def concat_datasets(dataset_a, dataset_b, proportion_a: Optional[float] = None):
 
     return ConcatDataset([sampled_dataset_a, sampled_dataset_b])
 
+def make_h5_datasets():
+    h5_file = h5py.File(config.path_to_h5_train)
+    labels = h5_file['labels'][()].flatten()
+    files = h5_file['images']
+
+    idxs_faces = np.where(labels > 0)
+    idxs_nonfaces = np.where(labels == 0)
+
+    files_faces: h5py.Dataset = files[idxs_faces]
+    files_nonfaces: h5py.Dataset = files[idxs_nonfaces]
+
+    dataset_faces: H5Imagenet = H5Imagenet(files_faces)
+    dataset_nonfaces: H5CelebA = H5CelebA(files_nonfaces)
+
+    return dataset_faces, dataset_nonfaces
+
+
 def make_train_and_valid_loaders(
     batch_size: int,
     max_images: int,
@@ -60,8 +80,11 @@ def make_train_and_valid_loaders(
     nr_images: Optional[int] = max_images if max_images >= 0 else None
 
     # Create the datasets
-    imagenet_dataset: Dataset = ImagenetDataset(config.path_to_imagenet_images)
-    celeb_dataset: Dataset = CelebDataset(config.path_to_celeba_images, config.path_to_celeba_bbox_file)
+    if config.use_h5:
+        celeb_dataset, imagenet_dataset = make_h5_datasets()
+    else:
+        imagenet_dataset = ImagenetDataset(config.path_to_imagenet_images)
+        celeb_dataset = CelebDataset(config.path_to_celeba_images, config.path_to_celeba_bbox_file)
 
     # Split both datasets into training and validation
     celeb_train, celeb_valid = split_dataset(celeb_dataset, train_size, nr_images)
