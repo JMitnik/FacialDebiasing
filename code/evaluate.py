@@ -123,9 +123,8 @@ def main():
     model.load_state_dict(torch.load(f"results/{config.path_to_model}/model.pt"))
     model.eval()
 
-    interpolate_images(model, 20)
-
-    return
+    # interpolate_images(model, 20)
+    # return
     
     losses = []
     accs = []
