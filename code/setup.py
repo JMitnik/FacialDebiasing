@@ -7,6 +7,7 @@ from typing import Optional
 
 # Default device
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# DEVICE = 'cpu'
 
 # Define folder name
 FOLDER_NAME = "{}".format(datetime.datetime.now().strftime("%d_%m_%Y---%H_%M_%S"))
@@ -35,6 +36,7 @@ parser.add_argument("--debug_mode", type=bool,
                         help='Debug mode')
 parser.add_argument("--use_h5", type=bool,
                         help='Use h5')
+
 ARGS = parser.parse_args()
 
 num_workers = 5 if ARGS.num_workers is None else ARGS.num_workers
@@ -78,6 +80,8 @@ class Config(NamedTuple):
     eval_freq: int = ARGS.eval_freq or 5
     # Number workers
     num_workers: int = 5 if ARGS.num_workers is None else ARGS.num_workers
+    # Debug mode
+    debug_mode: bool = False if ARGS.debug_mode is None else ARGS.debug_mode
     # Image size
     image_size: int = 64
     # Number windows evaluation
