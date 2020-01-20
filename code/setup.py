@@ -84,7 +84,7 @@ class Config(NamedTuple):
 config = Config()
 
 
-def init_trainining_results_settings():
+def init_trainining_results():
     # Write run-folder name
     if not os.path.exists("results"):
         os.makedirs("results")

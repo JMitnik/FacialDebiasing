@@ -197,5 +197,5 @@ def main():
         torch.save(model.state_dict(), "results/"+config.run_folder+"/model.pt".format(epoch))
 
 if __name__ == "__main__":
-    init_trainining_results_settings()
+    init_trainining_results()
     main()
