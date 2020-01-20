@@ -8,11 +8,12 @@ from setup import config
 import os
 import numpy as np
 import pandas as pd
+import uuid
 from PIL import Image
 from typing import Callable, Optional, List, NamedTuple
 from enum import Enum
 
-from torch import float64
+from torch import float64, floor
 
 class GenderEnum(Enum):
     MEN = "men"
@@ -61,6 +62,10 @@ def slide_windows_over_img(
         sub_images = slide_single_window_over_img(img, win_size)
         result.append(sub_images)
 
+    # Uncomment to store the images
+    # if config.debug_mode:
+    #     save_images(torch.cat(result))
+
     return torch.cat(result, dim=0)
 
 def apply_window_resize(img: torch.Tensor, win_size: int):
@@ -76,7 +81,8 @@ def apply_window_resize(img: torch.Tensor, win_size: int):
 
 def slide_single_window_over_img(
     img: torch.Tensor,
-    win_size: int
+    win_size: int,
+    stride_pct: float = 0.5
 ):
     img = torch.squeeze(img)
 
@@ -86,8 +92,10 @@ def slide_single_window_over_img(
 
     sub_images = []
 
-    for y in range(0, img_height, win_size):
-        for x in range(0, img_width, win_size):
+    step_size = int(np.floor(win_size * stride_pct))
+
+    for y in range(0, img_height, step_size):
+        for x in range(0, img_width, step_size):
             sub_image = img[:, x: x + win_size, y: y + win_size]
 
             resized_sub_image = apply_window_resize(sub_image, win_size)
@@ -99,4 +107,16 @@ def slide_single_window_over_img(
 def visualize_tensor(img_tensor: torch.Tensor):
     pil_transformer = transforms.ToPILImage()
 
-    return pil_transformer(img_tensor)
+    pil_transformer(img_tensor).show()
+
+def save_images(torch_tensors: torch.Tensor):
+    rand_filenames = str(uuid.uuid4())[:8]
+    pil_transformer = transforms.ToPILImage()
+    image_folder = f"results/{config.run_folder}/debug/images/{rand_filenames}/"
+    os.makedirs(image_folder, exist_ok=True)
+
+    for i, img in enumerate(torch_tensors):
+        pil_img = pil_transformer(img)
+        pil_img.save(f"{image_folder}/{rand_filenames}_{i}.jpg")
+
+    return torch_tensors
