@@ -62,8 +62,7 @@ def slide_windows_over_img(
         sub_images = slide_single_window_over_img(img, win_size)
         result.append(sub_images)
 
-    # Uncomment to store the images
-    if config.debug_mode:
+    if config.eval_save_sliding_windows:
         save_images(torch.cat(result))
 
     return torch.cat(result, dim=0)
