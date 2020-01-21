@@ -47,7 +47,7 @@ def eval_model(model, data_loader):
 
                 pred, loss = model.forward(images, labels)
 
-                loss = loss/batch_size
+                loss = loss.mean()
 
                 avg_loss += loss.item()
 
@@ -138,13 +138,35 @@ def main():
 
         loss, acc = eval_model(model, eval_loader)
 
-        print(f"{name_list[i]} => loss:{loss:.1f}, acc:{acc:.3f}")
+        print(f"{name_list[i]} => loss:{loss:.3f}, acc:{acc:.3f}")
+
+        with open(f"results/{config.path_to_model}/evaluation_results.txt", 'a+') as wf:
+            wf.write(f"{name_list[i]} => loss:{loss:.3f}, acc:{acc:.3f}\n")
 
         losses.append(loss)
         accs.append(acc)
 
     print(f"Losses => all:{losses[0]:.3f}, dark male: {losses[1]:.3f}, dark female: {losses[2]:.3f}, white male: {losses[3]:.3f}, white female: {losses[4]:.3f}")
     print(f"Accuracy => all:{accs[0]:.3f}, dark male: {accs[1]:.3f}, dark female: {accs[2]:.3f}, white male: {accs[3]:.3f}, white female: {accs[4]:.3f}")
+
+    print(f"Variance => {(torch.Tensor(accs[1:5])*100).var().item():.3f}")
+
+    with open(f"results/{config.path_to_model}/evaluation_results.txt", 'a+') as wf:
+        wf.write(f"\nVariance => {(torch.Tensor(accs[1:5])*100).var().item():.3f}\n")
+
+
+#################### NEGATIVE SAMPLING ####################
+    # eval_loader: DataLoader = make_eval_loader(
+    #         batch_size=config.batch_size,
+    #         filter_exclude_skin_color=skin_list[i],
+    #         filter_exclude_gender=gender_list[i],
+    #         nr_windows=config.eval_nr_windows
+    #     )
+
+    # loss, acc = eval_model(model, eval_loader)
+    # with open(f"results/{config.path_to_model}/evaluation_results.txt", 'a+') as wf:
+    #     wf.write(f"\nNegative score => loss:{loss:.3f}, acc:{acc:.3f}\n")
+
     return
 
 if __name__ == "__main__":
