@@ -13,16 +13,32 @@ from typing import Callable
 from enum import Enum
 from torch import float64
 
-from .generic import default_transform, DataLabel
+from .generic import default_transform, DataLabel, slide_windows_over_img
 
 class ImagenetDataset(ImageFolder):
-    def __init__(self, path_to_images: str, transform: Callable = default_transform):
+    def __init__(
+        self,
+        path_to_images: str,
+        transform: Callable = default_transform,
+        nr_windows: int = -1,
+        batch_size: int = -1
+    ):
         super().__init__(path_to_images, transform)
+
+        self.nr_windows: int = nr_windows
+        self.batch_size = batch_size
 
     def __getitem__(self, idx: int):
         # Override label with negative
         img, _ = super().__getitem__(idx)
-        return (img, DataLabel.NEGATIVE.value, idx)
+
+        imgs = img
+
+        if self.nr_windows > 0:
+            imgs = slide_windows_over_img(img, min_win_size=config.eval_min_size, max_win_size=config.eval_max_size, nr_windows=self.nr_windows)
+            imgs = torch.split(imgs, self.batch_size)
+
+        return (imgs, DataLabel.NEGATIVE.value, idx)
 
     def sample(self, amount: int):
         max_idx: int = len(self)

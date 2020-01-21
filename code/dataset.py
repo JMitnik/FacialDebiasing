@@ -7,7 +7,7 @@ from torch.utils.data.sampler import RandomSampler
 from setup import config
 import h5py
 import numpy as np
-from typing import Optional, List, NamedTuple, Union
+from typing import Optional, List, Union
 
 from datasets.generic import CountryEnum, DataLoaderTuple, GenderEnum, SkinColorEnum
 from datasets.celeb_a import CelebDataset
@@ -118,22 +118,30 @@ def make_eval_loader(
     filter_exclude_skin_color: List[Union[SkinColorEnum, str]] = [],
     proportion_faces: float = 0.5,
     batch_size: int = 16,
-    nr_windows: int = 10
+    nr_windows: int = 10,
+    use_positive_class: bool = True
 ):
-
-    # Define faces dataset
-    pbb_dataset = PPBDataset(
-        path_to_images=config.path_to_eval_face_images,
-        path_to_metadata=config.path_to_eval_metadata,
-        filter_excl_country=filter_exclude_country,
-        filter_excl_gender=filter_exclude_gender,
-        filter_excl_skin_color=filter_exclude_skin_color,
-        nr_windows=nr_windows,
-        batch_size=batch_size
-    )
+    if use_positive_class:
+        # Define faces dataset
+        dataset = PPBDataset(
+            path_to_images=config.path_to_eval_face_images,
+            path_to_metadata=config.path_to_eval_metadata,
+            filter_excl_country=filter_exclude_country,
+            filter_excl_gender=filter_exclude_gender,
+            filter_excl_skin_color=filter_exclude_skin_color,
+            nr_windows=nr_windows,
+            batch_size=batch_size
+        )
+    else:
+        # Define nonfaces dataset
+        dataset = ImagenetDataset(
+            path_to_images=config.path_to_eval_nonface_images,
+            nr_windows=nr_windows,
+            batch_size=batch_size
+        )
 
     # Concat and wrap with loader
-    data_loader = DataLoader(pbb_dataset, batch_size=1, shuffle=True, num_workers=config.num_workers)
+    data_loader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=config.num_workers)
 
     return data_loader
 

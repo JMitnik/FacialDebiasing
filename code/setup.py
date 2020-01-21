@@ -80,8 +80,6 @@ class Config(NamedTuple):
     eval_freq: int = ARGS.eval_freq or 5
     # Number workers
     num_workers: int = 5 if ARGS.num_workers is None else ARGS.num_workers
-    # Debug mode
-    debug_mode: bool = False if ARGS.debug_mode is None else ARGS.debug_mode
     # Image size
     image_size: int = 64
     # Number windows evaluation
@@ -94,6 +92,8 @@ class Config(NamedTuple):
     use_h5: bool = False if ARGS.use_h5 is None else ARGS.use_h5
     # Debug mode prints several statistics
     debug_mode: bool = False if ARGS.debug_mode is None else ARGS.debug_mode
+    # Store sliding windows for eval (WARNING: THIS WILL TAKE UP HARD-DRIVE SPACE)
+    eval_save_sliding_windows: bool = False
 
 config = Config()
 
