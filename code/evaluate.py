@@ -144,15 +144,15 @@ def main():
             wf.write(f"{name_list[i]} => loss:{loss:.3f}, acc:{acc:.3f}\n")
 
         losses.append(loss)
-        accs.append(acc)
+        accs.append(acc*100)
 
     print(f"Losses => all:{losses[0]:.3f}, dark male: {losses[1]:.3f}, dark female: {losses[2]:.3f}, white male: {losses[3]:.3f}, white female: {losses[4]:.3f}")
     print(f"Accuracy => all:{accs[0]:.3f}, dark male: {accs[1]:.3f}, dark female: {accs[2]:.3f}, white male: {accs[3]:.3f}, white female: {accs[4]:.3f}")
 
-    print(f"Variance => {(torch.Tensor(accs[1:5])*100).var().item():.3f}")
+    print(f"Variance => {(torch.Tensor(accs[1:5])).var().item():.3f}")
 
     with open(f"results/{config.path_to_model}/evaluation_results.txt", 'a+') as wf:
-        wf.write(f"\nVariance => {(torch.Tensor(accs[1:5])*100).var().item():.3f}\n")
+        wf.write(f"\nVariance => {(torch.Tensor(accs[1:5])).var().item():.3f}\n")
 
 
 #################### NEGATIVE SAMPLING ####################
