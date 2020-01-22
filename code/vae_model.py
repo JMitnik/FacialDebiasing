@@ -254,7 +254,6 @@ class Db_vae(nn.Module):
         return
 
     def get_histo_base(self):
-        print("START WITH BASE")
         probs = torch.zeros_like(self.means[:,0]).to(self.device)
 
         for i in range(self.z_dim):
@@ -275,8 +274,6 @@ class Db_vae(nn.Module):
             probs = torch.max(probs, torch.Tensor(p).to(self.device))
 
         probs /= probs.sum()
-
-        print("DONE WITH BASE")
 
         return probs
 

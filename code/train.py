@@ -97,7 +97,7 @@ def train_epoch(model, data_loaders: DataLoaderTuple, optimizer):
         avg_acc += acc
 
         if i % config.eval_freq == 0:
-            print("batch:{} accuracy:{}".format(i, acc))
+            print(f"batch:{i} accuracy:{acc}")
 
         count = i
 
@@ -166,7 +166,7 @@ def main():
     for epoch in range(config.epochs):
         # Generic sequential dataloader to sample histogram
         starttime = datetime.datetime.now()
-        print("Starting epoch:{}/{}".format(epoch, config.epochs))
+        print(f"Starting epoch: {epoch+1}, {config.epochs}")
 
         hist_loader = make_hist_loader(train_loaders.faces.dataset, config.batch_size)
         
@@ -179,21 +179,19 @@ def main():
             train_loaders.faces.sampler.weights = torch.ones(len(train_loaders.faces.sampler.weights))
 
         train_loss, train_acc = train_epoch(model, train_loaders, optimizer)
-        
-        print("Training done")
+
+        print(f"epoch {epoch+1}/{config.epochs}, runtime={runtime}::Training done => train_loss={train_loss:.2f}, train_acc={train_acc:.2f}")
         val_loss, val_acc = eval_epoch(model, valid_loaders, epoch)
         runtime = datetime.datetime.now() - starttime
-        print(f"epoch {epoch+1}/{config.epochs}, runtime={runtime} , train_loss={train_loss:.2f}, train_acc={train_acc:.2f}, val_loss={val_loss:.2f}, val_acc={val_acc:.2f}")
+        print(f"epoch {epoch+1}/{config.epochs}, runtime={runtime}::Evaluation done => val_loss={val_loss:.2f}, val_acc={val_acc:.2f}")
 
         valid_data = concat_datasets(valid_loaders.faces.dataset, valid_loaders.nonfaces.dataset, proportion_a=0.5)
         utils.print_reconstruction(model, valid_data, epoch)
 
-        with open("results/" + config.run_folder + "/training_results.csv", "a") as write_file:
-            s = "{},{},{},{},{}\n".format(epoch, train_loss, val_loss, train_acc, val_acc)
-            print("S:", s)
-            write_file.write(s)
+        with open(f"results/{config.run_folder}/training_results.csv", "a") as wf:
+            wf.write(f"{epoch}, {train_loss}, {val_loss}, {train_acc}, {val_acc}\n")
 
-        torch.save(model.state_dict(), "results/"+config.run_folder+"/model.pt".format(epoch))
+        torch.save(model.state_dict(), f"results/{config.run_folder}/model.pt")
 
 if __name__ == "__main__":
     init_trainining_results()
