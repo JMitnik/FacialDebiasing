@@ -105,6 +105,16 @@ def init_trainining_results():
     os.makedirs("results/"+ config.run_folder + '/best_and_worst')
     os.makedirs("results/"+ config.run_folder + '/bias_probs')
     os.makedirs("results/"+ config.run_folder + '/reconstructions')
+    
+    with open("results/" + config.run_folder + "/flags.txt", "w") as write_file:
+      write_file.write(f"zdim = {config.zdim}\n")
+      write_file.write(f"alpha = {config.alpha}\n")
+      write_file.write(f"epochs = {config.epochs}\n")
+      write_file.write(f"batch size = {config.batch_size}\n")
+      write_file.write(f"eval frequency = {config.eval_freq}\n")
+      write_file.write(f"dataset size = {config.dataset_size}\n")
+      write_file.write(f"debiasing type = {config.debias_type}\n")
+
 
     if config.debug_mode:
         os.makedirs(f"results/{config.run_folder}/debug")
