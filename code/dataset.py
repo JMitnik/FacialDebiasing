@@ -56,11 +56,11 @@ def make_h5_datasets():
     labels = h5_file['labels'][()].flatten()
     files = h5_file['images']
 
-    idxs_faces = np.where(labels > 0)
-    idxs_nonfaces = np.where(labels == 0)
+    idxs_faces = np.where(labels > 0)[0].flatten()
+    idxs_nonfaces = np.where(labels == 0)[0].flatten()
 
-    files_faces: h5py.Dataset = files[idxs_faces]
-    files_nonfaces: h5py.Dataset = files[idxs_nonfaces]
+    files_faces: h5py.Dataset = files[idxs_faces.tolist()]
+    files_nonfaces: h5py.Dataset = files[idxs_nonfaces.tolist()]
 
     dataset_faces: H5Imagenet = H5Imagenet(files_faces)
     dataset_nonfaces: H5CelebA = H5CelebA(files_nonfaces)

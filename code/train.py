@@ -113,7 +113,7 @@ def eval_epoch(model, data_loaders: DataLoaderTuple, epoch):
 
     all_labels = torch.tensor([], dtype=torch.long).to(config.device)
     all_preds = torch.tensor([]).to(config.device)
-    all_idxs = torch.tensor([], dtype=torch.long).to(config.device)
+    all_idxs = torch.tensor([], dtype=torch.int32).to(config.device)
 
     count = 0
 
