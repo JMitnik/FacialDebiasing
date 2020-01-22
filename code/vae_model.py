@@ -147,35 +147,36 @@ class Db_vae(nn.Module):
         negative average elbo for the given batch.
         """
         pred, mean, std = self.encoder(images)
-        # TODO:
-        # Acc of the classfication should be added properly - Requires some
-        # extra target input
 
         loss_class = F.binary_cross_entropy_with_logits(pred, labels.float(), reduction='none')
         
+        # We only want to calculate the loss towards actual faces
+        faceslicer = labels == 1
+        facemean = mean[faceslicer]
+        facestd = std[faceslicer]
+
         # Get single samples from the distributions with reparametrisation trick
-        dist = torch.distributions.normal.Normal(mean, std)
+        dist = torch.distributions.normal.Normal(facemean, facestd)
         z = dist.rsample().to(self.device)
 
         res = self.decoder(z)
 
-        # TODO:
-        # Change losses of VAE part only towards those of the actual faces.
-        # Also shouldnt feed those to the decoder, waste of time
 
         # calculate VAE losses
-        loss_recon = (images - res)**2
+        loss_recon = (images[faceslicer] - res)**2
         loss_recon = loss_recon.view(loss_recon.shape[0],-1).mean(1)
 
         loss_kl = torch.distributions.kl.kl_divergence(dist, self.target_dist)
         loss_kl = loss_kl.view(loss_kl.shape[0],-1).mean(1)
 
         loss_vae = self.c2 * loss_recon + self.c3 * loss_kl
-        slicer = labels == 0
-        loss_vae[slicer] = 0
-
-        # calculate total loss
-        loss_total = self.c1 * loss_class + loss_vae
+        loss_total = self.c1 * loss_class
+        
+        # Only add loss to positions of faces, rest is zero
+        zeros = torch.zeros(faceslicer.shape[0]).to(self.device)
+        zeros[faceslicer] = loss_vae
+        
+        loss_total = loss_total + zeros
 
         return pred, loss_total
 
