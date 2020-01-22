@@ -12,7 +12,8 @@ class H5CelebA(TorchDataset):
         self.pil_transformer = transforms.ToPILImage()
 
     def __getitem__(self, idx):
-        img: Image = self.pil_transformer(self.dataset[idx])
+        img: Image = self.pil_transformer(self.dataset[idx, :, :, ::-1])
+
         img = self.transform(img)
 
         label: int = DataLabel.POSITIVE.value

@@ -62,8 +62,8 @@ def make_h5_datasets():
     files_faces: h5py.Dataset = files[idxs_faces.tolist()]
     files_nonfaces: h5py.Dataset = files[idxs_nonfaces.tolist()]
 
-    dataset_faces: H5Imagenet = H5Imagenet(files_faces)
-    dataset_nonfaces: H5CelebA = H5CelebA(files_nonfaces)
+    dataset_nonfaces: H5Imagenet = H5Imagenet(files_faces)
+    dataset_faces: H5CelebA = H5CelebA(files_nonfaces)
 
     return dataset_faces, dataset_nonfaces
 
