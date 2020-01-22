@@ -249,7 +249,7 @@ class Db_vae(nn.Module):
         for i in range(self.z_dim):
             dist = self.means[:,i].cpu().numpy()
 
-            hist, bins = np.histogram(dist, density=True, bins=self.bins)
+            hist, bins = np.histogram(dist, density=True, bins=self.num_bins)
 
             bins[0] = -float('inf')
             bins[-1] = float('inf')
