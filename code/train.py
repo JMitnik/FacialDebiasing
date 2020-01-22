@@ -18,6 +18,8 @@ from datasets.generic import DataLoaderTuple
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
 
+import datetime
+
 def update_histogram(model, data_loader, epoch):
     # reset the means and histograms
 
@@ -163,6 +165,7 @@ def main():
 
     for epoch in range(config.epochs):
         # Generic sequential dataloader to sample histogram
+        starttime = datetime.datetime.now()
         print("Starting epoch:{}/{}".format(epoch, config.epochs))
 
         if config.debias_type != 'none':
@@ -175,9 +178,8 @@ def main():
         train_loss, train_acc = train_epoch(model, train_loaders, optimizer)
         print("Training done")
         val_loss, val_acc = eval_epoch(model, valid_loaders, epoch)
-
-        print("epoch {}/{}, train_loss={:.2f}, train_acc={:.2f}, val_loss={:.2f}, val_acc={:.2f}".format(epoch+1,
-                                    config.epochs, train_loss, train_acc, val_loss, val_acc))
+        runtime = datetime.datetime.now() - starttime
+        print(f"epoch {epoch+1}/{config.epochs}, runtime={runtime} , train_loss={train_loss:.2f}, train_acc={train_acc:.2f}, val_loss={val_loss:.2f}, val_acc={val_acc:.2f}")
 
         valid_data = concat_datasets(valid_loaders.faces.dataset, valid_loaders.nonfaces.dataset, proportion_a=0.5)
         utils.print_reconstruction(model, valid_data, epoch)
