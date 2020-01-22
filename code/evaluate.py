@@ -27,14 +27,11 @@ def eval_model(model, data_loader):
     count = 0
     correct_count = 0
 
-    all_labels = torch.tensor([], dtype=torch.long).to(config.device)
-    all_preds = torch.tensor([]).to(config.device)
-
     with torch.no_grad():
         for i, batch in enumerate(data_loader):
             # print(f"batch number {i}")
             count += 1
-            images_list, _, _ = batch
+            images_list, _, _ , _= batch
 
             for images in images_list:
                 if len(images.shape) == 5:
@@ -51,9 +48,6 @@ def eval_model(model, data_loader):
 
                 avg_loss += loss.item()
 
-                all_labels = torch.cat((all_labels, labels))
-                all_preds = torch.cat((all_preds, pred))
-
                 
                 if (pred > 0).any():
                     correct_count += 1
@@ -61,7 +55,7 @@ def eval_model(model, data_loader):
 
     print(f"Amount of labels:{count}, Correct labels:{correct_count}")
 
-    return avg_loss/(count+1), correct_count/count
+    return avg_loss/(count+1), (correct_count/count)*100
 
 def interpolate_images(model, amount):
     eval_loader: DataLoader = make_eval_loader(
@@ -72,15 +66,13 @@ def interpolate_images(model, amount):
     image_1 = []
     image_2 = []
     for i, batch in enumerate(eval_loader):
-        images_list, _, _ = batch
-
-        images = images_list[-1].squeeze()
+        _, _, _, img = batch
 
         if i == 0:
-            image_1 = images[-1]
+            image_1 = img.view(3, 64, 64)
 
         if i == 1:
-            image_2 = images[-1]
+            image_2 = img.view(3, 64, 64)
 
         if i > 1:
             break
@@ -91,12 +83,12 @@ def interpolate_images(model, amount):
     fig=plt.figure(figsize=(16, 16))
 
     ax = fig.add_subplot(2, 2, 1)
-    grid = make_grid(images[0,:,:,:].view(1,3,64,64), 1)
+    grid = make_grid(images[1,:,:,:].view(1,3,64,64), 1)
     plt.imshow(grid.permute(1,2,0).cpu())
     utils.remove_frame(plt)
 
     ax = fig.add_subplot(2, 2, 2)
-    grid = make_grid(images[1,:,:,:].view(1,3,64,64), 1)
+    grid = make_grid(images[0,:,:,:].view(1,3,64,64), 1)
     plt.imshow(grid.permute(1,2,0).cpu())
     utils.remove_frame(plt)
 
@@ -144,7 +136,7 @@ def main():
             wf.write(f"{name_list[i]} => loss:{loss:.3f}, acc:{acc:.3f}\n")
 
         losses.append(loss)
-        accs.append(acc*100)
+        accs.append(acc)
 
     print(f"Losses => all:{losses[0]:.3f}, dark male: {losses[1]:.3f}, dark female: {losses[2]:.3f}, white male: {losses[3]:.3f}, white female: {losses[4]:.3f}")
     print(f"Accuracy => all:{accs[0]:.3f}, dark male: {accs[1]:.3f}, dark female: {accs[2]:.3f}, white male: {accs[3]:.3f}, white female: {accs[4]:.3f}")

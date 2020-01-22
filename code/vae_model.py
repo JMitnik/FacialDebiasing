@@ -115,7 +115,7 @@ class Decoder(nn.Module):
 
 class Db_vae(nn.Module):
 
-    def __init__(self, z_dim=20, hist_size=1000, alpha=0.01, device="cpu"):
+    def __init__(self, z_dim=20, hist_size=1000, alpha=0.01, num_bins=10, device="cpu"):
         super().__init__()
 
         self.device = device
@@ -130,7 +130,8 @@ class Db_vae(nn.Module):
         self.c2 = 1
         self.c3 = 0.1
 
-        self.num_bins = 500
+        self.num_bins = num_bins
+        # self.num_bins = 500
         self.min_val = -15
         self.max_val = 15
 
@@ -248,7 +249,7 @@ class Db_vae(nn.Module):
         for i in range(self.z_dim):
             dist = self.means[:,i].cpu().numpy()
 
-            hist, bins = np.histogram(dist, density=True, bins=10)
+            hist, bins = np.histogram(dist, density=True, bins=self.bins)
 
             bins[0] = -float('inf')
             bins[-1] = float('inf')

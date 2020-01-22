@@ -156,7 +156,7 @@ def main():
     )
 
     # Initialize model
-    model = vae_model.Db_vae(z_dim=config.zdim, device=config.device, alpha=config.alpha).to(config.device)
+    model = vae_model.Db_vae(z_dim=config.zdim, device=config.device, alpha=config.alpha, num_bins=config.num_bins).to(config.device)
 
     # Initialize optimizer
     optimizer = torch.optim.Adam(model.parameters())

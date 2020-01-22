@@ -9,9 +9,6 @@ from typing import Optional
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # DEVICE = 'cpu'
 
-# Define folder name
-FOLDER_NAME = "{}".format(datetime.datetime.now().strftime("%d_%m_%Y---%H_%M_%S"))
-
 # Parse arguments
 parser = argparse.ArgumentParser()
 parser.add_argument('--batch_size', type=int,
@@ -21,6 +18,8 @@ parser.add_argument('--epochs', type=int,
 parser.add_argument('--zdim', type=int,
                     help='dimensionality of latent space')
 parser.add_argument('--alpha', type=float,
+                    help='importance of debiasing')
+parser.add_argument('--num_bins', type=float,
                     help='importance of debiasing')
 parser.add_argument('--dataset_size', type=int,
                     help='total size of database')
@@ -36,6 +35,8 @@ parser.add_argument("--debug_mode", type=bool,
                         help='Debug mode')
 parser.add_argument("--use_h5", type=bool,
                         help='Use h5')
+parser.add_argument("--folder_name", type=str, default="{}".format(datetime.datetime.now().strftime("%d_%m_%Y---%H_%M_%S")),
+                        help='folder_name_to_save in')
 
 ARGS = parser.parse_args()
 
@@ -65,9 +66,11 @@ class Config(NamedTuple):
     # Device to use
     device: torch.device = DEVICE
     # Folder name of the run
-    run_folder: str = FOLDER_NAME
+    run_folder: str = ARGS.folder_name
     # Batch size
     batch_size: int = ARGS.batch_size or 256
+    # Number of bins
+    num_bins: int = ARGS.num_bins or 10
     # Epochs
     epochs: int = ARGS.epochs or 10
     # Z dimension
@@ -111,5 +114,13 @@ def init_trainining_results():
 
     with open("results/" + config.run_folder + "/training_results.csv", "a+") as write_file:
         write_file.write("epoch,train_loss,valid_loss,train_acc,valid_acc\n")
+
+    with open(f"results/{config.run_folder}/flags.txt", "w") as wf:
+        wf.write(f"debias_type: {config.debias_type}\n")
+        wf.write(f"alpha: {config.alpha}\n")
+        wf.write(f"zdim: {config.zdim}\n")
+        wf.write(f"batch_size: {config.batch_size}\n")
+        wf.write(f"dataset_size: {config.dataset_size}\n")
+        wf.write(f"use_h5: {config.use_h5}\n")
 
 print(f"Config => {config}")

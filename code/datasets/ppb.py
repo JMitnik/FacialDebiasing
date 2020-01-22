@@ -61,7 +61,7 @@ class PPBDataset(TorchDataset):
 
         label = DataLabel.POSITIVE.value
 
-        return (imgs, label, idx)
+        return (imgs, label, idx, img)
 
     def __len__(self):
         return len(self.df_metadata)
