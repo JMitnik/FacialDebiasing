@@ -180,6 +180,16 @@ class Db_vae(nn.Module):
 
         return pred, loss_total
 
+    def forward_eval(self, images):
+        """
+        Given images, perform an encoding and decoding step and return the
+        negative average elbo for the given batch.
+        """
+        with torch.no_grad():
+            pred, _,_ = self.encoder(images)
+
+        return pred
+
 
     def interpolate(self, images, amount):
         with torch.no_grad():

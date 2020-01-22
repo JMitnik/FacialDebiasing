@@ -168,13 +168,16 @@ def main():
         starttime = datetime.datetime.now()
         print("Starting epoch:{}/{}".format(epoch, config.epochs))
 
+        hist_loader = make_hist_loader(train_loaders.faces.dataset, config.batch_size)
+        
         if config.debias_type != 'none':
-            hist_loader = make_hist_loader(train_loaders.faces.dataset, config.batch_size)
             hist = update_histogram(model, hist_loader, epoch)
             utils.write_hist(hist, epoch)
 
             train_loaders.faces.sampler.weights = hist
-
+        else:
+            train_loaders.faces.sampler.weights = torch.ones(len(train_loaders.faces.sampler.weights))
+            
         train_loss, train_acc = train_epoch(model, train_loaders, optimizer)
         print("Training done")
         val_loss, val_acc = eval_epoch(model, valid_loaders, epoch)

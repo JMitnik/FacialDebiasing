@@ -82,7 +82,7 @@ def apply_window_resize(img: torch.Tensor, win_size: int):
 def slide_single_window_over_img(
     img: torch.Tensor,
     win_size: int,
-    stride_pct: float = 0.5
+    stride_pct: float = 0.2
 ):
     img = torch.squeeze(img)
 
