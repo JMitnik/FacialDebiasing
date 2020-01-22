@@ -177,8 +177,9 @@ def main():
             train_loaders.faces.sampler.weights = hist
         else:
             train_loaders.faces.sampler.weights = torch.ones(len(train_loaders.faces.sampler.weights))
-            
+
         train_loss, train_acc = train_epoch(model, train_loaders, optimizer)
+        
         print("Training done")
         val_loss, val_acc = eval_epoch(model, valid_loaders, epoch)
         runtime = datetime.datetime.now() - starttime

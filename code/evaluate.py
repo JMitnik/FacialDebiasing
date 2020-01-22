@@ -50,7 +50,7 @@ def eval_model(model, data_loader):
 
     print(f"Amount of labels:{count}, Correct labels:{correct_count}")
 
-    return (correct_count/count)*100
+    return (correct_count/count)*100, count
 
 def interpolate_images(model, amount):
     eval_loader: DataLoader = make_eval_loader(
@@ -97,9 +97,9 @@ def interpolate_images(model, amount):
 
 
 def main():
-    gender_list = [[], ["Female"], ["Male"], ["Female"], ["Male"]]
-    skin_list = [[], ["lighter"], ["lighter"], ["darker"], ["darker"]]
-    name_list = ["all", "dark man", "dark female", "light man", "light female"]
+    gender_list = [["Female"], ["Male"], ["Female"], ["Male"]]
+    skin_list = [["lighter"], ["lighter"], ["darker"], ["darker"]]
+    name_list = ["dark man", "dark female", "light man", "light female"]
 
     # Load model
     model = vae_model.Db_vae(z_dim=config.zdim, device=config.device).to(config.device)
@@ -115,7 +115,10 @@ def main():
     
     losses = []
     accs = []
-    for i in range(5):
+
+    total_acc = 0
+    total_count = 0
+    for i in range(4):
         eval_loader: DataLoader = make_eval_loader(
             batch_size=config.batch_size,
             filter_exclude_skin_color=skin_list[i],
@@ -123,7 +126,10 @@ def main():
             nr_windows=config.eval_nr_windows
         )
 
-        acc = eval_model(model, eval_loader)
+        acc, count = eval_model(model, eval_loader)
+
+        total_acc += acc*count
+        total_count += count
 
         print(f"{name_list[i]} => acc:{acc:.3f}")
 
@@ -132,12 +138,12 @@ def main():
 
         accs.append(acc)
 
-    print(f"Accuracy => all:{accs[0]:.3f}, dark male: {accs[1]:.3f}, dark female: {accs[2]:.3f}, white male: {accs[3]:.3f}, white female: {accs[4]:.3f}")
+    print(f"Accuracy => all:{total_acc/total_count:.3f}, dark male: {accs[0]:.3f}, dark female: {accs[1]:.3f}, white male: {accs[2]:.3f}, white female: {accs[3]:.3f}")
 
-    print(f"Variance => {(torch.Tensor(accs[1:5])).var().item():.3f}")
+    print(f"Variance => {(torch.Tensor(accs)).var().item():.3f}")
 
     with open(f"results/{config.path_to_model}/evaluation_results.txt", 'a+') as wf:
-        wf.write(f"\nVariance => {(torch.Tensor(accs[1:5])).var().item():.3f}\n")
+        wf.write(f"\nVariance => {(torch.Tensor(accs)).var().item():.3f}\n")
 
 
 #################### NEGATIVE SAMPLING ####################
