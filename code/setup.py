@@ -72,7 +72,7 @@ class Config(NamedTuple):
     # Number of bins
     num_bins: int = ARGS.num_bins or 10
     # Epochs
-    epochs: int = ARGS.epochs or 10
+    epochs: int = ARGS.epochs or 50
     # Z dimension
     zdim: int = ARGS.zdim or 200
     # Alpha value
