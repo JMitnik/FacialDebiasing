@@ -41,6 +41,8 @@ parser.add_argument("--eval_name", type=str, default="evaluation_results.txt",
                         help='eval name')
 parser.add_argument('--stride', type=float,
                     help='importance of debiasing')
+parser.add_argument('--eval_dataset', type=float,
+                    help='Name of eval dataset [ppb/h5_imagenet/h5]')
 ARGS = parser.parse_args()
 
 num_workers = 5 if ARGS.num_workers is None else ARGS.num_workers
@@ -104,6 +106,8 @@ class Config(NamedTuple):
     use_h5: bool = False if ARGS.use_h5 is None else ARGS.use_h5
     # Debug mode prints several statistics
     debug_mode: bool = False if ARGS.debug_mode is None else ARGS.debug_mode
+    # Dataset for evaluation
+    eval_dataset: str = 'ppb'
 
 config = Config()
 
@@ -115,7 +119,7 @@ def init_trainining_results():
     os.makedirs("results/"+ config.run_folder + '/best_and_worst')
     os.makedirs("results/"+ config.run_folder + '/bias_probs')
     os.makedirs("results/"+ config.run_folder + '/reconstructions')
-    
+
     with open(f"results/{config.run_folder}/flags.txt", "w") as write_file:
       write_file.write(f"zdim = {config.zdim}\n")
       write_file.write(f"alpha = {config.alpha}\n")

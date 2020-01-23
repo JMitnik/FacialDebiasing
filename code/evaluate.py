@@ -42,7 +42,7 @@ def eval_model(model, data_loader):
 
             pred = model.forward_eval(images)
 
-            
+
             if (pred > 0).any():
                 # print("CORRECT")
                 correct_count += 1
@@ -71,7 +71,7 @@ def interpolate_images(model, amount):
 
         if i > 1:
             break
-    
+
     images = torch.stack((image_1, image_2)).to(config.device)
     recon_images = model.interpolate(images, amount)
 
@@ -91,7 +91,7 @@ def interpolate_images(model, amount):
     grid = make_grid(recon_images.reshape(amount,3,64,64), amount)
     plt.imshow(grid.permute(1,2,0).cpu())
     utils.remove_frame(plt)
-    
+
     plt.show()
 
 
@@ -107,12 +107,12 @@ def main():
     if not config.path_to_model:
         raise Exception('Load up a model using --path_to_model')
 
-    model.load_state_dict(torch.load(f"results/{config.path_to_model}/model.pt"))
+    model.load_state_dict(torch.load(f"results/{config.path_to_model}/model.pt", map_location=config.device))
     model.eval()
 
     # interpolate_images(model, 20)
     # return
-    
+
     # losses = []
     # accs = []
 
@@ -153,7 +153,8 @@ def main():
 #################### NEGATIVE SAMPLING ####################
     eval_loader: DataLoader = make_eval_loader(
             batch_size=config.batch_size,
-            nr_windows=config.eval_nr_windows
+            nr_windows=config.eval_nr_windows,
+            dataset_type=config.eval_dataset
         )
 
     loss, acc = eval_model(model, eval_loader)

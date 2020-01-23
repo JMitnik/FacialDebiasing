@@ -1,3 +1,4 @@
+from enum import Enum
 from datasets.h5celeba import H5CelebA
 from datasets.h5imagenet import H5Imagenet
 import torch
@@ -112,6 +113,11 @@ def make_train_and_valid_loaders(
 
     return train_loaders, valid_loaders
 
+class EvalDatasetType(Enum):
+    PBB_ONLY = 'ppb'
+    IMAGENET_ONLY = 'imagenet'
+    H5_IMAGENET_ONLY = 'h5_imagenet'
+
 def make_eval_loader(
     filter_exclude_gender: List[Union[GenderEnum, str]] = [],
     filter_exclude_country: List[Union[CountryEnum, str]] = [],
@@ -119,23 +125,48 @@ def make_eval_loader(
     proportion_faces: float = 0.5,
     batch_size: int = 16,
     nr_windows: int = 10,
-    stride: float = 0.2
+    stride: float = 0.2,
+    dataset_type: str = EvalDatasetType.PBB_ONLY.value
 ):
 
+    if dataset_type == EvalDatasetType.PBB_ONLY.value:
     # Define faces dataset
-    pbb_dataset = PPBDataset(
-        path_to_images=config.path_to_eval_face_images,
-        path_to_metadata=config.path_to_eval_metadata,
-        filter_excl_country=filter_exclude_country,
-        filter_excl_gender=filter_exclude_gender,
-        filter_excl_skin_color=filter_exclude_skin_color,
-        nr_windows=nr_windows,
-        batch_size=batch_size,
-        stride=stride
-    )
+        print('Evaluating on PPB')
+        dataset = PPBDataset(
+            path_to_images=config.path_to_eval_face_images,
+            path_to_metadata=config.path_to_eval_metadata,
+            filter_excl_country=filter_exclude_country,
+            filter_excl_gender=filter_exclude_gender,
+            filter_excl_skin_color=filter_exclude_skin_color,
+            nr_windows=nr_windows,
+            batch_size=batch_size,
+            get_sub_images=True,
+            stride=stride
+        )
+    elif dataset_type == EvalDatasetType.IMAGENET_ONLY.value:
+        print('Evaluating on Imagenet')
+
+        dataset = ImagenetDataset(
+            path_to_images=config.path_to_eval_face_images,
+            batch_size=batch_size,
+            get_sub_images=True,
+            stride=stride,
+            nr_windows=nr_windows
+        )
+    else:
+        print('Evaluating on Imagenet H5')
+
+        _, h5_nonfaces = make_h5_datasets()
+        dataset = H5Imagenet(
+            h5_dataset=h5_nonfaces,
+            get_sub_images=True,
+            nr_windows=nr_windows,
+            stride=stride,
+            batch_size=batch_size
+        )
 
     # Concat and wrap with loader
-    data_loader = DataLoader(pbb_dataset, batch_size=1, shuffle=True, num_workers=config.num_workers)
+    data_loader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=config.num_workers)
 
     return data_loader
 
