@@ -53,6 +53,7 @@ def slide_windows_over_img(
     nr_windows: int,
     stride: float
 ):
+    print("Creating windows to slide")
     # Various sizes of the windows
     window_sizes: np.array = np.linspace(min_win_size, max_win_size, nr_windows, dtype=int)
 
@@ -67,6 +68,10 @@ def slide_windows_over_img(
     # if config.debug_mode:
     #     save_images(torch.cat(result))
 
+    if config.save_sub_images:
+        save_images(torch.cat(result))
+
+    print("Stopping windows to slide")
     return torch.cat(result, dim=0)
 
 def apply_window_resize(img: torch.Tensor, win_size: int):

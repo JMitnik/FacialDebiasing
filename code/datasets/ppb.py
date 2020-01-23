@@ -19,6 +19,7 @@ class PPBDataset(TorchDataset):
         nr_windows: int = 10,
         batch_size: int = -1,
         transform: Callable = default_transform,
+        get_sub_images: bool = False,
         stride: float = 0.2
     ):
         self.path_to_images: str = path_to_images
@@ -32,6 +33,7 @@ class PPBDataset(TorchDataset):
         self.batch_size: Optional[int] = None if batch_size < 0 else batch_size
         self.stride = stride
 
+        self.get_sub_images = get_sub_images
         self.df_metadata: pd.DataFrame = self._apply_filters_to_metadata(pd.read_csv(self.path_to_metadata))
 
 
@@ -55,10 +57,10 @@ class PPBDataset(TorchDataset):
 
         img = self.transform(img)
 
-        if self.batch_size:
-            imgs = slide_windows_over_img(img, min_win_size=config.eval_min_size, 
-                                          max_win_size=config.eval_max_size, 
-                                          nr_windows=self.nr_windows, 
+        if self.get_sub_images:
+            imgs = slide_windows_over_img(img, min_win_size=config.eval_min_size,
+                                          max_win_size=config.eval_max_size,
+                                          nr_windows=self.nr_windows,
                                           stride=self.stride)
             imgs = torch.split(imgs, self.batch_size)
         else:
