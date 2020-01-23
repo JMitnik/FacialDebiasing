@@ -41,8 +41,10 @@ parser.add_argument("--eval_name", type=str, default="evaluation_results.txt",
                         help='eval name')
 parser.add_argument('--stride', type=float,
                     help='importance of debiasing')
-parser.add_argument('--eval_dataset', type=float,
+parser.add_argument('--eval_dataset', type=str,
                     help='Name of eval dataset [ppb/h5_imagenet/h5]')
+parser.add_argument('--save_sub_images', type=bool,
+                    help='Save images')
 ARGS = parser.parse_args()
 
 num_workers = 5 if ARGS.num_workers is None else ARGS.num_workers
@@ -59,7 +61,7 @@ class Config(NamedTuple):
     # Path to evaluation metadata
     path_to_eval_metadata: str = 'data/ppb/PPB-2017-metadata.csv'
     # Path to evaluation images (Nonfaces such as Imagenet)
-    path_to_eval_nonface_images: str = 'data/eval_imagenet'
+    path_to_eval_nonface_images: str = 'data/imagenet'
     # Path to stored model
     path_to_model: Optional[str] = ARGS.path_to_model or None
     # Path to h5
@@ -107,7 +109,9 @@ class Config(NamedTuple):
     # Debug mode prints several statistics
     debug_mode: bool = False if ARGS.debug_mode is None else ARGS.debug_mode
     # Dataset for evaluation
-    eval_dataset: str = 'ppb'
+    eval_dataset: str = ARGS.eval_dataset or 'ppb'
+    # Images to save
+    save_sub_images: bool = False if ARGS.save_sub_images is None else ARGS.save_sub_images
 
 config = Config()
 

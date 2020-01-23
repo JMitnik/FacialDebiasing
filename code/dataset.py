@@ -53,20 +53,20 @@ def concat_datasets(dataset_a, dataset_b, proportion_a: Optional[float] = None):
     return ConcatDataset([sampled_dataset_a, sampled_dataset_b])
 
 def make_h5_datasets():
-    h5_file = h5py.File(config.path_to_h5_train)
-    labels = h5_file['labels'][()].flatten()
-    files = h5_file['images']
+    with h5py.File(config.path_to_h5_train, mode='r') as h5_file:
+        labels = h5_file['labels'][()].flatten()
+        files = h5_file['images']
 
-    idxs_faces = np.where(labels > 0)[0].flatten()
-    idxs_nonfaces = np.where(labels == 0)[0].flatten()
+        idxs_faces = np.where(labels > 0)[0].flatten()
+        idxs_nonfaces = np.where(labels == 0)[0].flatten()
 
-    files_faces: h5py.Dataset = files[idxs_faces.tolist()]
-    files_nonfaces: h5py.Dataset = files[idxs_nonfaces.tolist()]
+        files_faces: h5py.Dataset = files[idxs_faces.tolist()]
+        files_nonfaces: h5py.Dataset = files[idxs_nonfaces.tolist()]
 
-    dataset_nonfaces: H5Imagenet = H5Imagenet(files_nonfaces)
-    dataset_faces: H5CelebA = H5CelebA(files_faces)
+        dataset_nonfaces: H5Imagenet = H5Imagenet(files_nonfaces)
+        dataset_faces: H5CelebA = H5CelebA(files_faces)
 
-    return dataset_faces, dataset_nonfaces
+        return dataset_faces, dataset_nonfaces
 
 
 def make_train_and_valid_loaders(
@@ -147,7 +147,7 @@ def make_eval_loader(
         print('Evaluating on Imagenet')
 
         dataset = ImagenetDataset(
-            path_to_images=config.path_to_eval_face_images,
+            path_to_images=config.path_to_eval_nonface_images,
             batch_size=batch_size,
             get_sub_images=True,
             stride=stride,
