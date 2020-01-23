@@ -122,7 +122,7 @@ def make_eval_loader(
     filter_exclude_gender: List[Union[GenderEnum, str]] = [],
     filter_exclude_country: List[Union[CountryEnum, str]] = [],
     filter_exclude_skin_color: List[Union[SkinColorEnum, str]] = [],
-    max_images: int = 3000,
+    max_images: int = -1,
     proportion_faces: float = 0.5,
     batch_size: int = 16,
     nr_windows: int = 10,
