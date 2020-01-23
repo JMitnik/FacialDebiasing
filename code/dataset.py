@@ -122,6 +122,7 @@ def make_eval_loader(
     filter_exclude_gender: List[Union[GenderEnum, str]] = [],
     filter_exclude_country: List[Union[CountryEnum, str]] = [],
     filter_exclude_skin_color: List[Union[SkinColorEnum, str]] = [],
+    max_images: int = 3000,
     proportion_faces: float = 0.5,
     batch_size: int = 16,
     nr_windows: int = 10,
@@ -165,13 +166,22 @@ def make_eval_loader(
             batch_size=batch_size
         )
 
+    nr_images: Optional[int] = max_images if max_images >= 0 else None
+
+    if nr_images:
+        dataset = subsample_dataset(dataset, nr_images, random=True)
+
     # Concat and wrap with loader
     data_loader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=config.num_workers)
 
     return data_loader
 
-def subsample_dataset(dataset: Dataset, nr_subsamples: int):
+def subsample_dataset(dataset: Dataset, nr_subsamples: int, random=False):
     idxs = np.arange(nr_subsamples)
+
+    if random:
+        idxs = np.random.choice(np.arange(len(dataset)), nr_subsamples)
+
     return Subset(dataset, idxs)
 
 
