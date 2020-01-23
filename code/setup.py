@@ -37,7 +37,10 @@ parser.add_argument("--use_h5", type=bool,
                         help='Use h5')
 parser.add_argument("--folder_name", type=str, default="{}".format(datetime.datetime.now().strftime("%d_%m_%Y---%H_%M_%S")),
                         help='folder_name_to_save in')
-
+parser.add_argument("--eval_name", type=str, default="evaluation_results.txt",
+                        help='eval name')
+parser.add_argument('--stride', type=float,
+                    help='importance of debiasing')
 ARGS = parser.parse_args()
 
 num_workers = 5 if ARGS.num_workers is None else ARGS.num_workers
@@ -67,6 +70,8 @@ class Config(NamedTuple):
     device: torch.device = DEVICE
     # Folder name of the run
     run_folder: str = ARGS.folder_name
+    # eval file name
+    eval_name: str = ARGS.eval_name
     # Batch size
     batch_size: int = ARGS.batch_size or 256
     # Number of bins
@@ -77,6 +82,8 @@ class Config(NamedTuple):
     zdim: int = ARGS.zdim or 200
     # Alpha value
     alpha: float = ARGS.alpha or 0.01
+    # stride used for evaluation windows
+    stride: float = ARGS.stride or 0.2
     # Dataset size
     dataset_size: int = ARGS.dataset_size or -1
     # Eval frequence

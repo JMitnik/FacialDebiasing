@@ -50,7 +50,8 @@ def slide_windows_over_img(
     img: torch.Tensor,
     min_win_size: int,
     max_win_size: int,
-    nr_windows: int
+    nr_windows: int,
+    stride: float
 ):
     # Various sizes of the windows
     window_sizes: np.array = np.linspace(min_win_size, max_win_size, nr_windows, dtype=int)
@@ -59,7 +60,7 @@ def slide_windows_over_img(
 
     # For each window-size, get all the sub
     for win_size in window_sizes:
-        sub_images = slide_single_window_over_img(img, win_size)
+        sub_images = slide_single_window_over_img(img, win_size, stride)
         result.append(sub_images)
 
     # Uncomment to store the images

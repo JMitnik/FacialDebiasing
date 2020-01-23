@@ -113,50 +113,52 @@ def main():
     # interpolate_images(model, 20)
     # return
     
-    losses = []
-    accs = []
+    # losses = []
+    # accs = []
 
-    total_acc = 0
-    total_count = 0
-    for i in range(4):
-        eval_loader: DataLoader = make_eval_loader(
-            batch_size=config.batch_size,
-            filter_exclude_skin_color=skin_list[i],
-            filter_exclude_gender=gender_list[i],
-            nr_windows=config.eval_nr_windows
-        )
-
-        acc, count = eval_model(model, eval_loader)
-
-        total_acc += acc*count
-        total_count += count
-
-        print(f"{name_list[i]} => acc:{acc:.3f}")
-
-        with open(f"results/{config.path_to_model}/evaluation_results.txt", 'a+') as wf:
-            wf.write(f"{name_list[i]} => acc:{acc:.3f}\n")
-
-        accs.append(acc)
-
-    print(f"Accuracy => all:{total_acc/total_count:.3f}, dark male: {accs[0]:.3f}, dark female: {accs[1]:.3f}, white male: {accs[2]:.3f}, white female: {accs[3]:.3f}")
-
-    print(f"Variance => {(torch.Tensor(accs)).var().item():.3f}")
-
-    with open(f"results/{config.path_to_model}/evaluation_results.txt", 'a+') as wf:
-        wf.write(f"\nVariance => {(torch.Tensor(accs)).var().item():.3f}\n")
-
-
-#################### NEGATIVE SAMPLING ####################
-    # eval_loader: DataLoader = make_eval_loader(
+    # total_acc = 0
+    # total_count = 0
+    # for i in range(4):
+    #     eval_loader: DataLoader = make_eval_loader(
     #         batch_size=config.batch_size,
     #         filter_exclude_skin_color=skin_list[i],
     #         filter_exclude_gender=gender_list[i],
-    #         nr_windows=config.eval_nr_windows
+    #         nr_windows=config.eval_nr_windows,
+    #         stride=config.stride
     #     )
 
-    # loss, acc = eval_model(model, eval_loader)
-    # with open(f"results/{config.path_to_model}/evaluation_results.txt", 'a+') as wf:
-    #     wf.write(f"\nNegative score => loss:{loss:.3f}, acc:{acc:.3f}\n")
+    #     acc, count = eval_model(model, eval_loader)
+
+    #     total_acc += acc*count
+    #     total_count += count
+
+    #     print(f"{name_list[i]} => acc:{acc:.3f}")
+
+    #     with open(f"results/{config.path_to_model}/{config.eval_name}.txt", 'a+') as wf:
+    #         wf.write(f"{name_list[i]} => acc:{acc:.3f}\n")
+
+    #     accs.append(acc)
+
+    # avg_acc = total_acc/total_count
+    # print(f"Accuracy => all:{avg_acc:.3f}, dark male: {accs[0]:.3f}, dark female: {accs[1]:.3f}, white male: {accs[2]:.3f}, white female: {accs[3]:.3f}")
+
+    # print(f"Variance => {(torch.Tensor(accs)).var().item():.3f}")
+
+    # with open(f"results/{config.path_to_model}/{config.eval_name}.txt", 'a+') as wf:
+    #     wf.write(f"all => acc:{avg_acc:.3f}\n")
+
+    #     wf.write(f"\nVariance => {(torch.Tensor(accs)).var().item():.3f}\n")
+
+
+#################### NEGATIVE SAMPLING ####################
+    eval_loader: DataLoader = make_eval_loader(
+            batch_size=config.batch_size,
+            nr_windows=config.eval_nr_windows
+        )
+
+    loss, acc = eval_model(model, eval_loader)
+    with open(f"results/{config.path_to_model}/{config.eval_name}.txt", 'a+') as wf:
+        wf.write(f"\nNegative score => loss:{loss:.3f}, acc:{acc:.3f}\n")
 
     return
 
