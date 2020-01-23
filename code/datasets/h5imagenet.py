@@ -29,7 +29,6 @@ class H5Imagenet(TorchDataset):
 
     def __getitem__(self, idx: int):
         # Override label with negative
-        print(idx)
         img: Image = self.pil_transformer(self.dataset[idx, :, :, ::-1])
         img = self.transform(img)
 
