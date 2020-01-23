@@ -27,11 +27,13 @@ class H5Imagenet(TorchDataset):
 
         self.get_sub_images = get_sub_images
 
-    def __getitem__(self, idx: int, get_sub_images: bool = False):
+    def __getitem__(self, idx: int):
         # Override label with negative
-        img, _ = super().__getitem__(idx)
+        print(idx)
+        img: Image = self.pil_transformer(self.dataset[idx, :, :, ::-1])
+        img = self.transform(img)
 
-        if get_sub_images:
+        if self.get_sub_images:
             sub_imgs = slide_windows_over_img(img, min_win_size=config.eval_min_size,
                                           max_win_size=config.eval_max_size,
                                           nr_windows=self.nr_windows,
@@ -40,10 +42,10 @@ class H5Imagenet(TorchDataset):
         else:
             sub_imgs = img.unsqueeze(0)
 
-        if get_sub_images:
+        if self.get_sub_images:
             return (sub_imgs, DataLabel.NEGATIVE.value, idx, img)
 
-        return img, label, idx
+        return img, DataLabel.NEGATIVE.value, idx
 
     def __len__(self):
         return len(self.dataset)
