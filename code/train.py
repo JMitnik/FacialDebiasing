@@ -179,7 +179,7 @@ def main():
             train_loaders.faces.sampler.weights = torch.ones(len(train_loaders.faces.sampler.weights))
 
         train_loss, train_acc = train_epoch(model, train_loaders, optimizer)
-
+        runtime = datetime.datetime.now() - starttime
         print(f"epoch {epoch+1}/{config.epochs}, runtime={runtime}::Training done => train_loss={train_loss:.2f}, train_acc={train_acc:.2f}")
         val_loss, val_acc = eval_epoch(model, valid_loaders, epoch)
         runtime = datetime.datetime.now() - starttime
