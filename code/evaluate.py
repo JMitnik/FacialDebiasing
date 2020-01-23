@@ -159,7 +159,7 @@ def main():
         )
 
     loss, acc = eval_model(model, eval_loader)
-    with open(f"results/{config.path_to_model}/{config.eval_name}.txt", 'a+') as wf:
+    with open(f"results/{config.path_to_model}/{config.eval_name}", 'a+') as wf:
         wf.write(f"\nNegative score => loss:{loss:.3f}, acc:{acc:.3f}\n")
 
     return
