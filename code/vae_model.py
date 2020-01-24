@@ -277,6 +277,34 @@ class Db_vae(nn.Module):
 
         return probs
 
+    def get_histo_logsum(self):
+        probs = torch.zeros_like(self.means, dtype=float).to(self.device)
+
+        for i in range(self.z_dim):
+            dist = self.means[:,i].cpu().numpy()
+
+            hist, bins = np.histogram(dist, density=True, bins=self.num_bins)
+
+            bins[0] = -float('inf')
+            bins[-1] = float('inf')
+            bin_idx = np.digitize(dist, bins)
+
+            hist = hist + self.alpha
+            hist /= np.sum(hist)
+
+            p = 1.0/(hist[bin_idx-1])
+            p /= np.sum(p)
+
+            probs[:,i] = torch.Tensor(p).to(self.device)
+
+        probs = torch.log(probs)
+        probs = probs.sum(1)
+        probs = 1.0/probs
+
+        probs /= probs.sum()
+
+        return probs
+
     def get_histo_our(self):
         """
             Returns the probabilities given the means given the histo values

@@ -118,6 +118,11 @@ def main():
 
     correct_pos = 0
     total_count = 0
+
+    wf = open(f"results/{config.path_to_model}/{config.eval_name}", 'a+')
+
+    wf.write(f"name,dark male,dark female,light male,light female,var,precision,recall,accuracy\n")
+    wf.write(f"{config.path_to_model}")
     for i in range(4):
         eval_loader: DataLoader = make_eval_loader(
             batch_size=config.batch_size,
@@ -135,18 +140,15 @@ def main():
 
         print(f"{name_list[i]} => recall:{recall:.3f}")
 
-        with open(f"results/{config.path_to_model}/{config.eval_name}", 'a+') as wf:
-            wf.write(f"{name_list[i]} => recall:{recall:.3f}\n")
+        wf.write(f",{recall:.3f}")
 
         recalls.append(recall)
 
     avg_recall = correct_pos/total_count*100
     print(f"Recall => all:{avg_recall:.3f}, dark male: {recalls[0]:.3f}, dark female: {recalls[1]:.3f}, white male: {recalls[2]:.3f}, white female: {recalls[3]:.3f}")
-
     print(f"Variance => {(torch.Tensor(recalls)).var().item():.3f}")
 
-    with open(f"results/{config.path_to_model}/{config.eval_name}", 'a+') as wf:
-        wf.write(f"\nVariance => {(torch.Tensor(recalls)).var().item():.3f}\n")
+    wf.write(f",{(torch.Tensor(recalls)).var().item():.3f}")
 
 #################### NEGATIVE SAMPLING ####################
     eval_loader: DataLoader = make_eval_loader(
@@ -159,15 +161,11 @@ def main():
     
     neg_count, count = eval_model(model, eval_loader)
     correct_neg = count - neg_count
-    neg_recall = correct_neg/count
-    print(f"correct_neg:{correct_neg}, correct_pos:{correct_pos}")
-    with open(f"results/{config.path_to_model}/{config.eval_name}", 'a+') as wf:
-        
-        wf.write(f"\nNegative score => recall:{neg_recall*100:.3f}\n")
-        wf.write(f"\nTotal Precision:{correct_pos/(correct_pos + correct_neg)*100:.3f}\n")
-        wf.write(f"\nTotal recall:{avg_recall:.3f}\n")
-        wf.write(f"\nTotal accuracy => {(correct_pos + correct_neg)/(2*1270)*100:.3f}")
+    neg_recall = (correct_neg/count) * 100
 
+    wf.write(f",{correct_pos/(correct_pos + neg_count)*100:.3f},{avg_recall:.3f},{(correct_pos + correct_neg)/(2*1270)*100:.3f}\n")
+
+    wf.close()
     return
 
 if __name__ == "__main__":

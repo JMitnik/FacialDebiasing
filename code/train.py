@@ -41,13 +41,16 @@ def update_histogram(model, data_loader, epoch):
             all_labels = torch.cat((all_labels, labels))
             all_index = torch.cat((all_index, index))
 
-            if config.debias_type == "base":
+            if config.debias_type == "base" or config.debias_type == "logsum":
                 model.build_means(images)
+
             elif config.debias_type == "our":
                 model.build_histo(images)
 
         if config.debias_type == "base":
             probs = model.get_histo_base()
+        elif config.debias_type == "logsum":
+            probs = model.get_histo_logsum()
         elif config.debias_type == "our":
             probs = model.get_histo_our()
         else:
@@ -141,7 +144,7 @@ def eval_epoch(model, data_loaders: DataLoaderTuple, epoch):
 
             count = i
 
-    print(f"Length of all evals: {all_labels.shape[0]}")
+    # print(f"Length of all evals: {all_labels.shape[0]}")
 
     best_faces, worst_faces, best_other, worst_other = utils.get_best_and_worst_predictions(all_labels, all_preds)
     utils.visualize_best_and_worst(data_loaders, all_labels, all_idxs, epoch, best_faces, worst_faces, best_other, worst_other)
@@ -166,7 +169,7 @@ def main():
     for epoch in range(config.epochs):
         # Generic sequential dataloader to sample histogram
         starttime = datetime.datetime.now()
-        print(f"Starting epoch: {epoch+1}, {config.epochs}")
+        print(f"Starting epoch: {epoch+1}/{config.epochs}")
 
         hist_loader = make_hist_loader(train_loaders.faces.dataset, config.batch_size)
         
