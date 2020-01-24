@@ -49,6 +49,21 @@ ARGS = parser.parse_args()
 
 num_workers = 5 if ARGS.num_workers is None else ARGS.num_workers
 
+def create_folder_name(foldername):
+    if foldername == "":
+        return foldername
+
+    suffix = ''
+    count = 0
+    while True:
+        if not os.path.isdir(f"results/{foldername}{suffix}"):
+            foldername = f'{foldername}{suffix}'
+            return foldername
+        else:
+            print(f'count: {count}')
+            count += 1
+            suffix = f'_{count}'
+
 class Config(NamedTuple):
     # Path to CelebA images
     path_to_celeba_images: str = 'data/celeba/images'
@@ -73,7 +88,7 @@ class Config(NamedTuple):
     # Device to use
     device: torch.device = DEVICE
     # Folder name of the run
-    run_folder: str = ARGS.folder_name
+    run_folder: str = create_folder_name(ARGS.folder_name)
     # eval file name
     eval_name: str = ARGS.eval_name
     # Batch size
@@ -113,7 +128,8 @@ class Config(NamedTuple):
     # Images to save
     save_sub_images: bool = False if ARGS.save_sub_images is None else ARGS.save_sub_images
 
-config = Config()
+
+
 
 def init_trainining_results():
     # Write run-folder name
@@ -148,4 +164,5 @@ def init_trainining_results():
         wf.write(f"dataset_size: {config.dataset_size}\n")
         wf.write(f"use_h5: {config.use_h5}\n")
 
+config = Config()
 print(f"Config => {config}")

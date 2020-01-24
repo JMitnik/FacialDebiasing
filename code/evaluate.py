@@ -99,7 +99,7 @@ def interpolate_images(model, amount):
 def main():
     gender_list = [["Female"], ["Male"], ["Female"], ["Male"]]
     skin_list = [["lighter"], ["lighter"], ["darker"], ["darker"]]
-    name_list = ["dark man", "dark female", "light man", "light female"]
+    name_list = ["dark male", "dark female", "light male", "light female"]
 
     # Load model
     model = vae_model.Db_vae(z_dim=config.zdim, device=config.device).to(config.device)
