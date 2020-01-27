@@ -140,7 +140,7 @@ def main():
         recalls.append(recall)
 
     avg_recall = correct_pos/total_count*100
-    print(f"Recall => all:{avg_recall:.3f}, dark male: {recalls[0]:.3f}, dark female: {recalls[1]:.3f}, white male: {recalls[2]:.3f}, white female: {recalls[3]:.3f}")
+    print(f"Recall => all:{avg_recall:.3f}, dark male: {recalls[0]:.3f}, dark female: {recalls[1]:.3f}, light male: {recalls[2]:.3f}, light female: {recalls[3]:.3f}")
     print(f"Variance => {(torch.Tensor(recalls)).var().item():.3f}")
 
 #################### NEGATIVE SAMPLING ####################
