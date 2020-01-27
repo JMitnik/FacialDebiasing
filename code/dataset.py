@@ -9,6 +9,7 @@ from setup import config
 import h5py
 import numpy as np
 from typing import Optional, List, NamedTuple, Union
+from logger import logger
 
 from datasets.generic import CountryEnum, DataLoaderTuple, GenderEnum, SkinColorEnum
 from datasets.celeb_a import CelebDataset
@@ -132,7 +133,8 @@ def make_eval_loader(
 
     if dataset_type == EvalDatasetType.PBB_ONLY.value:
     # Define faces dataset
-        print('Evaluating on PPB')
+        logger.info('Evaluating on PPB')
+
         dataset = PPBDataset(
             path_to_images=config.path_to_eval_face_images,
             path_to_metadata=config.path_to_eval_metadata,
@@ -145,7 +147,7 @@ def make_eval_loader(
             stride=stride
         )
     elif dataset_type == EvalDatasetType.IMAGENET_ONLY.value:
-        print('Evaluating on Imagenet')
+        logger.info('Evaluating on Imagenet')
 
         dataset = ImagenetDataset(
             path_to_images=config.path_to_eval_nonface_images,
@@ -155,7 +157,7 @@ def make_eval_loader(
             nr_windows=nr_windows
         )
     else:
-        print('Evaluating on Imagenet H5')
+        logger.info('Evaluating on Imagenet H5')
 
         _, h5_nonfaces = make_h5_datasets()
         dataset = H5Imagenet(

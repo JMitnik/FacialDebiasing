@@ -112,8 +112,6 @@ class Config(NamedTuple):
     eval_freq: int = ARGS.eval_freq or 5
     # Number workers
     num_workers: int = 5 if ARGS.num_workers is None else ARGS.num_workers
-    # Debug mode
-    debug_mode: bool = False if ARGS.debug_mode is None else ARGS.debug_mode
     # Image size
     image_size: int = 64
     # Number windows evaluation

@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from typing import NamedTuple, Union, List, Optional
+from typing import Optional
 from datetime import datetime
 from logger import logger
 from torch.utils.data.dataset import Dataset
@@ -77,19 +77,27 @@ class Trainer:
             )
 
             # Validation
+            logger.info("Starting validation")
             val_loss, val_acc = self._eval_epoch(epoch)
             epoch_val_t = datetime.now() - epoch_start_t
             logger.info(f"epoch {epoch+1}/{epochs}"
-                  f"runtime={epoch_val_t}::Evaluation done"
-                  "\t=> val_loss={val_loss:.2f}, val_acc={val_acc:.2f}")
+                  f"runtime={epoch_val_t}::Validation done"
+                  f"\t=> val_loss={val_loss:.2f}, val_acc={val_acc:.2f}")
 
             # Print reconstruction
             valid_data = concat_datasets(self.valid_loaders.faces.dataset, self.valid_loaders.nonfaces.dataset, proportion_a=0.5)
             utils.print_reconstruction(self.model, valid_data, epoch)
 
+        logger.success(f"Finished training on {epochs} epochs.")
+
     def _save_epoch(self, epoch: int, train_loss: float, val_loss: float, train_acc: float, val_acc: float):
         """Writes training and validation scores to a csv, and stores a model to disk."""
         if not self.path_to_folder:
+            logger.warning(f"`--run_folder` could not be found.",
+                           f"The program will continue, but won't save anything",
+                           f"Double-check if --run_folder is configured."
+            )
+
             return
 
         # Write epoch metrics
@@ -121,7 +129,6 @@ class Trainer:
         with torch.no_grad():
             for i, (face_batch, nonface_batch) in enumerate(zip(face_loader, nonface_loader)):
                 images, labels, idxs = utils.concat_batches(face_batch, nonface_batch)
-                batch_size = labels.size(0)
 
                 images = images.to(self.device)
                 labels = labels.to(self.device)
@@ -173,7 +180,6 @@ class Trainer:
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=5)
             self.optimizer.step()
 
-
             # Calculate metrics
             acc = utils.calculate_accuracy(labels, pred)
             avg_loss += loss.item()
@@ -187,10 +193,13 @@ class Trainer:
         return avg_loss/(count+1), avg_acc/(count+1)
 
     def _update_sampling_histogram(self, epoch: int):
+        """Updates the data loader for faces to be proportional to how challenge each image is, in case
+        debias_type not none is.
+        """
         hist_loader = make_hist_loader(self.train_loaders.faces.dataset, self.batch_size)
 
         if self.debias_type != 'none':
-            hist = self._sample_histogram(hist_loader, epoch)
+            hist = self._update_histogram(hist_loader, epoch)
             utils.write_hist(hist, epoch)
 
             self.train_loaders.faces.sampler.weights = hist
@@ -198,9 +207,9 @@ class Trainer:
             self.train_loaders.faces.sampler.weights = torch.ones(len(self.train_loaders.faces.sampler.weights))
 
 
-    def _sample_histogram(self, data_loader, epoch):
-        # reset the means and histograms
-        print(f"Updating weight histogram using method: {self.debias_type}")
+    def _update_histogram(self, data_loader, epoch):
+        """Updates the histogram of `self.model`."""
+        logger.info(f"Updating weight histogram using method: {self.debias_type}")
 
         self.model.hist = torch.ones((self.z_dim, self.model.num_bins)).to(self.device)
         self.model.means = torch.Tensor().to(self.device)
@@ -232,7 +241,10 @@ class Trainer:
             elif self.debias_type == "our":
                 probs = self.model.get_histo_our()
             else:
-                raise Exception("No correct debias method given. choose \"base\" or \"our\"")
+                logger.error("No correct debias method given!",
+                            "The program will now close",
+                            "Set --debias_method to 'base' or 'our'.")
+                raise Exception()
 
         utils.visualize_bias(probs, data_loader, all_labels, all_index, epoch)
 

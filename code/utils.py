@@ -1,3 +1,4 @@
+from logger import logger
 from datasets.generic import DatasetOutput
 import torch
 import numpy as np
@@ -13,17 +14,15 @@ from setup import config
 from dataset import sample_dataset, sample_idxs_from_loader, sample_idxs_from_loaders
 
 def calculate_accuracy(labels, pred):
-    """Calculates accuracy given labels and predictions
-    """
+    """Calculates accuracy given labels and predictions."""
     return float(((pred > 0) == (labels > 0)).sum()) / labels.size()[0]
 
 def get_best_and_worst_predictions(labels, pred):
-    """Returns indices of the best and worst predicted faces
-    """
+    """Returns indices of the best and worst predicted faces."""
     n_rows = 4
     n_samples = n_rows**2
 
-    print(f"Face percentage: {float(labels.sum().item())/len(labels)}")
+    logger.info(f"Face percentage: {float(labels.sum().item())/len(labels)}")
     indices = torch.tensor([i for i in range(len(labels))]).long().to(config.device)
 
     faceslice = labels == 1
@@ -38,17 +37,8 @@ def get_best_and_worst_predictions(labels, pred):
 
     return best_faces, worst_faces, best_other, worst_other
 
-
-def debug_memory():
-    tensors = Counter(
-        (str(o.device), o.dtype, tuple(o.shape))
-        for o in gc.get_objects() if torch.is_tensor(o)
-    )
-
-    for line in tensors.items():
-        print('{}\t{}'.format(*line))
-
 def remove_frame(plt):
+    # TODO: Add annotation
     frame = plt.gca()
     for xlabel_i in frame.axes.get_xticklabels():
         xlabel_i.set_visible(False)
@@ -62,6 +52,7 @@ def remove_frame(plt):
         tick.set_visible(False)
 
 def print_reconstruction(model, data, epoch, n_rows=4):
+    # TODO: Add annotation
     model.eval()
     n_samples = n_rows**2
 
@@ -96,6 +87,7 @@ def concat_batches(batch_a: DatasetOutput, batch_b: DatasetOutput):
     return images, labels, idxs
 
 def visualize_best_and_worst(data_loaders, all_labels, all_indices, epoch, best_faces, worst_faces, best_other, worst_other, n_rows=4):
+    # TODO: Add annotation
     n_samples = n_rows**2
 
     fig=plt.figure(figsize=(16, 16))
@@ -120,7 +112,8 @@ def visualize_best_and_worst(data_loaders, all_labels, all_indices, epoch, best_
 
 
 def visualize_bias(probs, data_loader, all_labels, all_index, epoch, n_rows=3):
-    n_samples = n_rows**2
+    # TODO: Add annotation
+    n_samples = n_rows ** 2
 
     highest_probs = probs.argsort(descending=True)[:n_samples]
     lowest_probs = probs.argsort()[:n_samples]
@@ -145,6 +138,7 @@ def visualize_bias(probs, data_loader, all_labels, all_index, epoch, n_rows=3):
 
 
 def write_hist(hist, epoch: int = 0):
+    """Writes histogram scores to file (if configuration debug mode is enabled)."""
     if config.debug_mode:
         print("Writing histogram to file")
 

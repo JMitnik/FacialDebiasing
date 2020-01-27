@@ -52,6 +52,18 @@ class Logger:
 
         logging.error(log_str)
 
+    def exception(self, message, next_step: Optional[str] = None):
+        log_str = ""
+        log_str += f" {str(self.sym_error)} {message} \n"
+
+        if next_step:
+            log_str += f"\n\t {self.sym_result} {next_step}"
+
+        if tip:
+            log_str += f"\n\t {self.sym_tip} {tip}"
+
+        logging.exception(log_str)
+
     def success(self, message, next_step: Optional[str] = None):
         log_str = ""
         log_str += f"{str(self.sym_success)} {message} \n"
