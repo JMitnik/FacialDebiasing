@@ -277,7 +277,7 @@ class Db_vae(nn.Module):
 
         return probs
 
-    def get_histo_logsum(self):
+    def get_histo_max5(self):
         probs = torch.zeros_like(self.means, dtype=float).to(self.device)
 
         for i in range(self.z_dim):
@@ -297,14 +297,8 @@ class Db_vae(nn.Module):
 
             probs[:,i] = torch.Tensor(p).to(self.device)
 
-        probs = torch.log(probs)
-        probs = probs.sum(1)
-        # probs = 1.0/probs
-
-        probs /= probs.sum()
-        probd = torch.exp(probs)
-
-        # print(probs)
+        probs = probs.sort(1, descending=True)[0][:,:5]
+        probs = torch.prod(1)
 
         return probs
 

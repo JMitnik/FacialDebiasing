@@ -41,7 +41,7 @@ def update_histogram(model, data_loader, epoch):
             all_labels = torch.cat((all_labels, labels))
             all_index = torch.cat((all_index, index))
 
-            if config.debias_type == "base" or config.debias_type == "logsum":
+            if config.debias_type == "base" or config.debias_type == "max5":
                 model.build_means(images)
 
             elif config.debias_type == "our":
@@ -49,8 +49,8 @@ def update_histogram(model, data_loader, epoch):
 
         if config.debias_type == "base":
             probs = model.get_histo_base()
-        elif config.debias_type == "logsum":
-            probs = model.get_histo_logsum()
+        elif config.debias_type == "max5":
+            probs = model.get_histo_max5()
         elif config.debias_type == "our":
             probs = model.get_histo_our()
         else:
