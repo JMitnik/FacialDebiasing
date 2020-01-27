@@ -162,8 +162,8 @@ class Trainer:
         face_batch: DatasetOutput
         nonface_batch: DatasetOutput
 
-        avg_loss: int = 0
-        avg_acc: int = 0
+        avg_loss: float = 0
+        avg_acc: float = 0
         count: int = 0
 
         for i, (face_batch, nonface_batch) in enumerate(zip(face_loader, nonface_loader)):
@@ -175,7 +175,7 @@ class Trainer:
 
             # Calculate the gradient, and clip at 5
             self.optimizer.zero_grad()
-            loss: torch.Tensor = loss.mean()
+            loss = loss.mean()
             loss.backward()
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=5)
             self.optimizer.step()
@@ -201,7 +201,6 @@ class Trainer:
         if self.debias_type != 'none':
             hist = self._update_histogram(hist_loader, epoch)
             utils.write_hist(hist, epoch)
-
             self.train_loaders.faces.sampler.weights = hist
         else:
             self.train_loaders.faces.sampler.weights = torch.ones(len(self.train_loaders.faces.sampler.weights))
@@ -220,10 +219,7 @@ class Trainer:
         with torch.no_grad():
             for _, batch in enumerate(data_loader):
                 images, labels, index = batch
-
-                #TEMPORARY TAKE ONLY FACES
                 images, labels, index = images.to(self.device), labels.to(self.device), index.to(self.device)
-                _ = labels.size(0)
 
                 all_labels = torch.cat((all_labels, labels))
                 all_index = torch.cat((all_index, index))
