@@ -2,6 +2,7 @@
 Here the structure of the network is made in pytorch
 """
 
+from typing import List, Union, Optional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -17,7 +18,7 @@ class Encoder(nn.Module):
               predicted value
     """
 
-    def __init__(self, z_dim=20):
+    def __init__(self, z_dim=20, custom_layers: Optional[nn.Sequential] = None):
         super().__init__()
 
         self.z_dim = z_dim
@@ -77,7 +78,7 @@ class Decoder(nn.Module):
     4 6 13 29 61
     """
 
-    def __init__(self, z_dim=20):
+    def __init__(self, z_dim=20, custom_layers: Optional[nn.Sequential] = None):
         super().__init__()
 
         self.layers = nn.Sequential(
@@ -115,14 +116,23 @@ class Decoder(nn.Module):
 
 class Db_vae(nn.Module):
 
-    def __init__(self, z_dim=20, hist_size=1000, alpha=0.01, num_bins=10, device="cpu"):
+    def __init__(
+        self,
+        z_dim=20,
+        hist_size=1000,
+        alpha=0.01,
+        num_bins=10,
+        device="cpu",
+        custom_encoding_layers: Optional[nn.Sequential] = None,
+        custom_decoding_layers: Optional[nn.Sequential] = None
+    ):
         super().__init__()
 
         self.device = device
         self.z_dim = z_dim
 
-        self.encoder = Encoder(z_dim)
-        self.decoder = Decoder(z_dim)
+        self.encoder = Encoder(z_dim, custom_encoding_layers)
+        self.decoder = Decoder(z_dim, custom_decoding_layers)
 
         self.target_dist = torch.distributions.normal.Normal(0, 1)
 
@@ -141,7 +151,7 @@ class Db_vae(nn.Module):
         self.alpha = alpha
 
 
-    def forward(self, images, labels):
+    def forward(self, images: torch.Tensor, labels: torch.Tensor):
         """
         Given images, perform an encoding and decoding step and return the
         negative average elbo for the given batch.
@@ -149,7 +159,7 @@ class Db_vae(nn.Module):
         pred, mean, std = self.encoder(images)
 
         loss_class = F.binary_cross_entropy_with_logits(pred, labels.float(), reduction='none')
-        
+
         # We only want to calculate the loss towards actual faces
         faceslicer = labels == 1
         facemean = mean[faceslicer]
@@ -171,11 +181,11 @@ class Db_vae(nn.Module):
 
         loss_vae = self.c2 * loss_recon + self.c3 * loss_kl
         loss_total = self.c1 * loss_class
-        
+
         # Only add loss to positions of faces, rest is zero
         zeros = torch.zeros(faceslicer.shape[0]).to(self.device)
         zeros[faceslicer] = loss_vae
-        
+
         loss_total = loss_total + zeros
 
         return pred, loss_total
@@ -198,8 +208,8 @@ class Db_vae(nn.Module):
             mean_1, std_1 = mean[0,:], std[0,:]
             mean_2, std_2 = mean[1,:], std[1,:]
 
-            all_mean  = torch.Tensor([]).to(self.device)
-            all_std = torch.Tensor([]).to(self.device)
+            all_mean  = torch.tensor([]).to(self.device)
+            all_std = torch.tensor([]).to(self.device)
 
             diff_mean = mean_1 - mean_2
             diff_std = std_1 = std_2

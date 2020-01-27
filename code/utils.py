@@ -1,3 +1,4 @@
+from datasets.generic import DatasetOutput
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,10 +18,12 @@ def calculate_accuracy(labels, pred):
     return float(((pred > 0) == (labels > 0)).sum()) / labels.size()[0]
 
 def get_best_and_worst_predictions(labels, pred):
+    """Returns indices of the best and worst predicted faces
+    """
     n_rows = 4
     n_samples = n_rows**2
 
-    print("face percentage:", float(labels.sum().item())/len(labels))
+    print(f"Face percentage: {float(labels.sum().item())/len(labels)}")
     indices = torch.tensor([i for i in range(len(labels))]).long().to(config.device)
 
     faceslice = labels == 1
@@ -84,11 +87,11 @@ def print_reconstruction(model, data, epoch, n_rows=4):
 
     plt.close()
 
-def concat_batches(batch_a, batch_b):
-    # TODO: Merge by interleaving the batches
-    images = torch.cat((batch_a[0], batch_b[0]), 0)
-    labels = torch.cat((batch_a[1], batch_b[1]), 0)
-    idxs = torch.cat((batch_a[2], batch_b[2]), 0)
+def concat_batches(batch_a: DatasetOutput, batch_b: DatasetOutput):
+    """Concatenates two batches of data of shape image x label x idx."""
+    images: torch.Tensor = torch.cat((batch_a.image, batch_b.image), 0)
+    labels: torch.Tensor = torch.cat((batch_a.label, batch_b.label), 0)
+    idxs: torch.Tensor = torch.cat((batch_a.idx, batch_b.idx), 0)
 
     return images, labels, idxs
 

@@ -102,7 +102,7 @@ def main():
     name_list = ["dark male", "dark female", "light male", "light female"]
 
     # Load model
-    model = vae_model.Db_vae(z_dim=config.zdim, device=config.device).to(config.device)
+    model = vae_model.Db_vae(z_dim=config.z_dim, device=config.device).to(config.device)
 
     if not config.path_to_model:
         raise Exception('Load up a model using --path_to_model')
@@ -155,10 +155,10 @@ def main():
             batch_size=config.batch_size,
             nr_windows=config.eval_nr_windows,
             dataset_type=config.eval_dataset,
-            max_images=config.dataset_size
+            max_images=config.max_images
         )
 
-    
+
     neg_count, count = eval_model(model, eval_loader)
     correct_neg = count - neg_count
     neg_recall = (correct_neg/count) * 100

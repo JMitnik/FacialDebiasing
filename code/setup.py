@@ -3,6 +3,7 @@ import torch
 import datetime
 import os
 import argparse
+from logger import logger
 from typing import Optional
 
 # Default device
@@ -15,13 +16,13 @@ parser.add_argument('--batch_size', type=int,
                     help='size of batch')
 parser.add_argument('--epochs', type=int,
                     help='max number of epochs')
-parser.add_argument('--zdim', type=int,
+parser.add_argument('--z_dim', type=int,
                     help='dimensionality of latent space')
 parser.add_argument('--alpha', type=float,
                     help='importance of debiasing')
 parser.add_argument('--num_bins', type=float,
                     help='importance of debiasing')
-parser.add_argument('--dataset_size', type=int,
+parser.add_argument('--max_images', type=int,
                     help='total size of database')
 parser.add_argument('--eval_freq', type=int,
                     help='total size of database')
@@ -45,6 +46,8 @@ parser.add_argument('--eval_dataset', type=str,
                     help='Name of eval dataset [ppb/h5_imagenet/h5]')
 parser.add_argument('--save_sub_images', type=bool,
                     help='Save images')
+parser.add_argument('--hist_size', type=bool,
+                    help='Number of histogram')
 ARGS = parser.parse_args()
 
 num_workers = 5 if ARGS.num_workers is None else ARGS.num_workers
@@ -98,13 +101,13 @@ class Config(NamedTuple):
     # Epochs
     epochs: int = ARGS.epochs or 50
     # Z dimension
-    zdim: int = ARGS.zdim or 200
+    z_dim: int = ARGS.z_dim or 200
     # Alpha value
     alpha: float = ARGS.alpha or 0.01
     # stride used for evaluation windows
     stride: float = ARGS.stride or 0.2
     # Dataset size
-    dataset_size: int = ARGS.dataset_size or -1
+    max_images: int = ARGS.max_images or -1
     # Eval frequence
     eval_freq: int = ARGS.eval_freq or 5
     # Number workers
@@ -127,8 +130,8 @@ class Config(NamedTuple):
     eval_dataset: str = ARGS.eval_dataset or 'ppb'
     # Images to save
     save_sub_images: bool = False if ARGS.save_sub_images is None else ARGS.save_sub_images
-
-
+    # Hist size
+    hist_size: int = 1000 if ARGS.hist_size is None else ARGS.hist_size
 
 
 def init_trainining_results():
@@ -141,12 +144,12 @@ def init_trainining_results():
     os.makedirs("results/"+ config.run_folder + '/reconstructions')
 
     with open(f"results/{config.run_folder}/flags.txt", "w") as write_file:
-      write_file.write(f"zdim = {config.zdim}\n")
+      write_file.write(f"z_dim = {config.z_dim}\n")
       write_file.write(f"alpha = {config.alpha}\n")
       write_file.write(f"epochs = {config.epochs}\n")
       write_file.write(f"batch size = {config.batch_size}\n")
       write_file.write(f"eval frequency = {config.eval_freq}\n")
-      write_file.write(f"dataset size = {config.dataset_size}\n")
+      write_file.write(f"max images = {config.max_images}\n")
       write_file.write(f"debiasing type = {config.debias_type}\n")
 
 
@@ -159,9 +162,9 @@ def init_trainining_results():
     with open(f"results/{config.run_folder}/flags.txt", "w") as wf:
         wf.write(f"debias_type: {config.debias_type}\n")
         wf.write(f"alpha: {config.alpha}\n")
-        wf.write(f"zdim: {config.zdim}\n")
+        wf.write(f"z_dim: {config.z_dim}\n")
         wf.write(f"batch_size: {config.batch_size}\n")
-        wf.write(f"dataset_size: {config.dataset_size}\n")
+        wf.write(f"max_images: {config.max_images}\n")
         wf.write(f"use_h5: {config.use_h5}\n")
 
 config = Config()

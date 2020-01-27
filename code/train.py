@@ -22,21 +22,21 @@ import datetime
 
 def update_histogram(model, data_loader, epoch):
     # reset the means and histograms
+    print(f"Updating weight histogram using method: {config.debias_type}")
 
-    print(f"update weight histogram using method: {config.debias_type}")
-    model.hist = torch.ones((config.zdim, model.num_bins)).to(config.device)
+    model.hist = torch.ones((config.z_dim, model.num_bins)).to(config.device)
     model.means = torch.Tensor().to(config.device)
 
     all_labels = torch.tensor([], dtype=torch.long).to(config.device)
     all_index = torch.tensor([], dtype=torch.long).to(config.device)
 
     with torch.no_grad():
-        for i, batch in enumerate(data_loader):
+        for _, batch in enumerate(data_loader):
             images, labels, index = batch
 
             #TEMPORARY TAKE ONLY FACES
             images, labels, index = images.to(config.device), labels.to(config.device), index.to(config.device)
-            batch_size = labels.size(0)
+            _ = labels.size(0)
 
             all_labels = torch.cat((all_labels, labels))
             all_index = torch.cat((all_index, index))
@@ -61,9 +61,7 @@ def update_histogram(model, data_loader, epoch):
     return probs
 
 def train_epoch(model, data_loaders: DataLoaderTuple, optimizer):
-    """
-    train the model for one epoch
-    """
+    """Train the model for one epoch."""
 
     face_loader, nonface_loader = data_loaders
 
@@ -144,8 +142,6 @@ def eval_epoch(model, data_loaders: DataLoaderTuple, epoch):
 
             count = i
 
-    # print(f"Length of all evals: {all_labels.shape[0]}")
-
     best_faces, worst_faces, best_other, worst_other = utils.get_best_and_worst_predictions(all_labels, all_preds)
     utils.visualize_best_and_worst(data_loaders, all_labels, all_idxs, epoch, best_faces, worst_faces, best_other, worst_other)
 
@@ -157,11 +153,11 @@ def main():
 
     train_loaders, valid_loaders = make_train_and_valid_loaders(
         batch_size=config.batch_size,
-        max_images=config.dataset_size
+        max_images=config.max_images
     )
 
     # Initialize model
-    model = vae_model.Db_vae(z_dim=config.zdim, device=config.device, alpha=config.alpha, num_bins=config.num_bins).to(config.device)
+    model = vae_model.Db_vae(z_dim=config.z_dim, device=config.device, alpha=config.alpha, num_bins=config.num_bins).to(config.device)
 
     # Initialize optimizer
     optimizer = torch.optim.Adam(model.parameters())
@@ -172,7 +168,7 @@ def main():
         print(f"Starting epoch: {epoch+1}/{config.epochs}")
 
         hist_loader = make_hist_loader(train_loaders.faces.dataset, config.batch_size)
-        
+
         if config.debias_type != 'none':
             hist = update_histogram(model, hist_loader, epoch)
             utils.write_hist(hist, epoch)

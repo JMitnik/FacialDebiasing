@@ -39,6 +39,12 @@ class DataLoaderTuple(NamedTuple):
     faces: DataLoader
     nonfaces: DataLoader
 
+class DatasetOutput(NamedTuple):
+    image: torch.FloatTensor
+    label: torch.LongTensor
+    idx: torch.LongTensor
+    sub_images: Optional[torch.Tensor] = None
+
 # Default transform
 default_transform = transforms.Compose([
     transforms.Resize((64, 64)),
