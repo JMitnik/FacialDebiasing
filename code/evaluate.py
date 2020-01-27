@@ -107,7 +107,7 @@ def main():
     if not config.path_to_model:
         raise Exception('Load up a model using --path_to_model')
 
-    model.load_state_dict(torch.load(f"results/{config.path_to_model}/model.pt", map_location=config.device))
+    model.load_state_dict(torch.load(f"results/{config.path_to_model}/{config.model_name}", map_location=config.device))
     model.eval()
 
     # interpolate_images(model, 20)

@@ -45,6 +45,8 @@ parser.add_argument('--eval_dataset', type=str,
                     help='Name of eval dataset [ppb/h5_imagenet/h5]')
 parser.add_argument('--save_sub_images', type=bool,
                     help='Save images')
+parser.add_argument('--model_name', type=str, default="model.pt",
+                    help='name of the model to evaluate')
 ARGS = parser.parse_args()
 
 num_workers = 5 if ARGS.num_workers is None else ARGS.num_workers
@@ -83,6 +85,8 @@ class Config(NamedTuple):
     path_to_h5_train: str = 'data/h5_train/train_face.h5'
     # Type of debiasing used
     debias_type: str = ARGS.debias_type or 'none'
+    # name of the model to evaluate
+    model_name: str = ARGS.model_name or 'model.pt'
     # Random seed for reproducability
     random_seed: int = 0
     # Device to use
