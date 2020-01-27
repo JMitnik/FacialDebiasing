@@ -298,8 +298,9 @@ class Db_vae(nn.Module):
             probs[:,i] = torch.Tensor(p).to(self.device)
 
         probs = probs.sort(1, descending=True)[0][:,:5]
-        probs = torch.prod(1)
+        probs = probs.prod(1)
 
+        print(probs)
         return probs
 
     def get_histo_our(self):
