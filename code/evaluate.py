@@ -122,7 +122,7 @@ def main():
     wf = open(f"results/{config.path_to_model}/{config.eval_name}", 'a+')
 
     wf.write(f"name,dark male,dark female,light male,light female,var,precision,recall,accuracy\n")
-    wf.write(f"{config.path_to_model}")
+    wf.write(f"{config.path_to_model}_{config.model_name}")
     for i in range(4):
         eval_loader: DataLoader = make_eval_loader(
             batch_size=config.batch_size,
