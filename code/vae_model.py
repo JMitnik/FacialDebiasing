@@ -299,9 +299,12 @@ class Db_vae(nn.Module):
 
         probs = torch.log(probs)
         probs = probs.sum(1)
-        probs = 1.0/probs
+        # probs = 1.0/probs
 
         probs /= probs.sum()
+        probd = torch.exp(probs)
+
+        # print(probs)
 
         return probs
 
