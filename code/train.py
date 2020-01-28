@@ -19,12 +19,14 @@ from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
 
 import datetime
+import numpy as np
+from scipy.stats import norm
 
 def update_histogram(model, data_loader, epoch):
     # reset the means and histograms
 
     print(f"update weight histogram using method: {config.debias_type}")
-    model.hist = torch.ones((config.zdim, model.num_bins)).to(config.device)
+    # model.hist = torch.ones((config.zdim, model.num_bins)).to(config.device)
     model.means = torch.Tensor().to(config.device)
 
     all_labels = torch.tensor([], dtype=torch.long).to(config.device)
@@ -46,7 +48,6 @@ def update_histogram(model, data_loader, epoch):
 
             elif config.debias_type == "our":
                 model.build_histo(images)
-
         if config.debias_type == "base":
             probs = model.get_histo_base()
         elif config.debias_type == "max5":
