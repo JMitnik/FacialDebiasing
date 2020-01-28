@@ -25,9 +25,9 @@ def eval_model(model, data_loader):
 
     for i, batch in enumerate(data_loader):
         count += 1
-        images_list, _, _ , _= batch
+        sub_images, _, _ , _= batch
 
-        for images in images_list:
+        for images in sub_images:
             if len(images.shape) == 5:
                 images = images.squeeze(dim=0)
 

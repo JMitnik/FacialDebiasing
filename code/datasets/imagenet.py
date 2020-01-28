@@ -13,7 +13,7 @@ from typing import Callable, Optional
 from enum import Enum
 from torch import float64
 
-from .generic import DatasetOutput, default_transform, DataLabel, slide_windows_over_img
+from .data_utils import DatasetOutput, default_transform, DataLabel, slide_windows_over_img
 
 class ImagenetDataset(ImageFolder):
     def __init__(
@@ -33,22 +33,17 @@ class ImagenetDataset(ImageFolder):
         self.get_sub_images = get_sub_images
 
     def __getitem__(self, idx: int):
-        # Override label with negative
         img, _ = super().__getitem__(idx)
 
         if self.get_sub_images:
-            sub_imgs = slide_windows_over_img(img, min_win_size=config.eval_min_size,
+            sub_images = slide_windows_over_img(img, min_win_size=config.eval_min_size,
                                           max_win_size=config.eval_max_size,
                                           nr_windows=self.nr_windows,
                                           stride=self.stride)
-            sub_imgs = torch.split(sub_imgs, self.batch_size)
+            sub_images = torch.split(sub_images, self.batch_size)
         else:
-            sub_imgs = img.unsqueeze(0)
+            sub_images = torch.tensor(0)
 
-        if self.get_sub_images:
-            return (sub_imgs, DataLabel.NEGATIVE.value, idx, img)
-
-        sub_images = torch.tensor(0)
         return DatasetOutput(
             image=img,
             label=DataLabel.NEGATIVE.value,

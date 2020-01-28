@@ -5,7 +5,7 @@ import pandas as pd
 import os
 from PIL import Image
 from typing import Callable, Optional, List, Union
-from .generic import CountryEnum, DatasetOutput, SkinColorEnum, default_transform, DataLabel, GenderEnum, slide_windows_over_img
+from .data_utils import CountryEnum, DatasetOutput, SkinColorEnum, default_transform, DataLabel, GenderEnum, slide_windows_over_img
 from setup import config
 
 class PPBDataset(TorchDataset):
@@ -13,9 +13,9 @@ class PPBDataset(TorchDataset):
         self,
         path_to_images: str,
         path_to_metadata: str,
-        filter_excl_gender: List[Union[GenderEnum, str]] = [],
-        filter_excl_country: List[Union[CountryEnum, str]] = [],
-        filter_excl_skin_color: List[Union[SkinColorEnum, str]] = [],
+        filter_excl_gender: List[str] = [],
+        filter_excl_country: List[str] = [],
+        filter_excl_skin_color: List[str] = [],
         nr_windows: int = 10,
         batch_size: int = -1,
         transform: Callable = default_transform,
@@ -24,9 +24,9 @@ class PPBDataset(TorchDataset):
     ):
         self.path_to_images: str = path_to_images
         self.path_to_metadata: str = path_to_metadata
-        self.filter_excl_gender: List[Union[GenderEnum, str]] = filter_excl_gender
-        self.filter_excl_country: List[Union[CountryEnum, str]] = filter_excl_country
-        self.filter_excl_skin_color: List[Union[SkinColorEnum, str]] = filter_excl_skin_color
+        self.filter_excl_gender: List[str] = filter_excl_gender
+        self.filter_excl_country: List[str] = filter_excl_country
+        self.filter_excl_skin_color: List[str] = filter_excl_skin_color
         self.transform = transform
 
         self.nr_windows: int = nr_windows
@@ -58,13 +58,13 @@ class PPBDataset(TorchDataset):
         img = self.transform(img)
 
         if self.get_sub_images:
-            imgs = slide_windows_over_img(img, min_win_size=config.eval_min_size,
+            sub_images = slide_windows_over_img(img, min_win_size=config.eval_min_size,
                                           max_win_size=config.eval_max_size,
                                           nr_windows=self.nr_windows,
                                           stride=self.stride)
-            imgs = torch.split(imgs, self.batch_size)
+            sub_images = torch.split(sub_images, self.batch_size)
         else:
-            imgs = img.unsqueeze(0)
+            sub_images = torch.tensor(0)
 
         label = DataLabel.POSITIVE.value
 
@@ -72,7 +72,7 @@ class PPBDataset(TorchDataset):
             image=img,
             label=label,
             idx=idx,
-            sub_images=imgs
+            sub_images=sub_images
         )
 
     def __len__(self):

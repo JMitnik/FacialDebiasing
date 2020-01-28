@@ -9,7 +9,7 @@ from typing import Callable
 
 from torch import float64
 
-from .generic import default_transform, DataLabel, DatasetOutput
+from .data_utils import default_transform, DataLabel, DatasetOutput
 
 # Default transform
 default_transform = transforms.Compose([
@@ -34,21 +34,18 @@ class CelebDataset(TorchDataset):
         Returns:
             (tensor, int) -- Image and class
         """
-        img: Image = Image.open(os.path.join(self.path_to_images,
-                                      self.df_images.iloc[idx].image_id))
+        # Read img into PIL.Image format
+        img: Image = Image.open(os.path.join(
+            self.path_to_images,
+            self.df_images.iloc[idx].image_id)
+        )
 
+        # Transform to tensor
         img = self.transform(img)
-
         label: int = DataLabel.POSITIVE.value
-
         sub_images = torch.tensor(0)
 
-        return DatasetOutput(
-            img,
-            label,
-            idx,
-            sub_images=sub_images
-        )
+        return DatasetOutput(img, label, idx, sub_images=sub_images)
 
     def sample(self, amount: int):
         max_idx: int = len(self)

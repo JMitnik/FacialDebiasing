@@ -46,11 +46,7 @@ class Evaluator:
         )
         raise Exception
 
-    def eval(
-        self,
-        filter_exclude_skin_color: List[str] = [],
-        filter_exclude_gender: List[str] = []
-    ):
+    def eval(self, filter_exclude_skin_color: List[str] = [], filter_exclude_gender: List[str] = []):
         self.model.eval()
 
         eval_loader: DataLoader = make_eval_loader(
@@ -64,10 +60,7 @@ class Evaluator:
         correct_count, count = self.eval_model(eval_loader)
         return correct_count, count
 
-    def eval_on_setups(
-        self,
-        eval_name: str
-    ):
+    def eval_on_setups(self, eval_name: str):
         # Define the setups
         gender_list = [["Female"], ["Male"], ["Female"], ["Male"]]
         skin_list = [["lighter"], ["lighter"], ["darker"], ["darker"]]
@@ -110,27 +103,22 @@ class Evaluator:
         logger.info(f"Variance => {(torch.tensor(recalls)).var().item():.3f}")
         wf.write(f",{(torch.tensor(recalls)).var().item():.3f}")
 
-        return
-
-    def eval_model(
-        self,
-        eval_loader: DataLoader
-    ):
+    def eval_model(self, eval_loader: DataLoader):
         """Perform evaluation of a single epoch."""
         self.model.eval()
 
         count = 0
         correct_count = 0
 
-        for i, batch in enumerate(eval_loader):
+        # Iterate over all images and their sub_images
+        for _, batch in enumerate(eval_loader):
             count += 1
-            images_list, _, _ , _= batch
+            sub_images, _, _ , _= batch
 
-            for images in images_list:
+            for images in sub_images:
                 if len(images.shape) == 5:
                     images = images.squeeze(dim=0)
 
-                batch_size = images.size(0)
                 images = images.to(self.device)
 
                 pred = self.model.forward_eval(images)

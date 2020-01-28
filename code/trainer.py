@@ -6,7 +6,7 @@ from logger import logger
 from torch.utils.data.dataset import Dataset
 
 from vae_model import Db_vae
-from datasets.generic import DataLoaderTuple, DatasetOutput
+from datasets.data_utils import DataLoaderTuple, DatasetOutput
 import utils
 from dataset import make_hist_loader, make_train_and_valid_loaders, concat_datasets
 
@@ -239,8 +239,8 @@ class Trainer:
                 probs = self.model.get_histo_our()
             else:
                 logger.error("No correct debias method given!",
-                            "The program will now close",
-                            "Set --debias_method to 'base' or 'our'.")
+                            next_step="The program will now close",
+                            tip="Set --debias_method to 'base' or 'our'.")
                 raise Exception()
 
         utils.visualize_bias(probs, data_loader, all_labels, all_index, epoch)

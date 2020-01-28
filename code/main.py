@@ -10,7 +10,7 @@ import torch
 from logger import logger
 import utils
 import torch.nn as nn
-from datasets.generic import slide_windows_over_img
+from datasets.data_utils import slide_windows_over_img
 
 config = Config(use_h5=True)
 

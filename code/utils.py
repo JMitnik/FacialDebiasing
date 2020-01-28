@@ -1,6 +1,6 @@
 from typing import List
 from logger import logger
-from datasets.generic import DatasetOutput
+from datasets.data_utils import DatasetOutput
 import torch
 import numpy as np
 import matplotlib.pyplot as plt

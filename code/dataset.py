@@ -11,7 +11,7 @@ import numpy as np
 from typing import Optional, List, NamedTuple, Union
 from logger import logger
 
-from datasets.generic import CountryEnum, DataLoaderTuple, GenderEnum, SkinColorEnum
+from datasets.data_utils import CountryEnum, DataLoaderTuple, GenderEnum, SkinColorEnum
 from datasets.celeb_a import CelebDataset
 from datasets.imagenet import ImagenetDataset
 from datasets.ppb import PPBDataset

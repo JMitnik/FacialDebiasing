@@ -5,7 +5,7 @@ from PIL import Image
 import torch
 from setup import config
 from typing import Callable, Optional
-from .generic import default_transform, DataLabel, slide_windows_over_img, DatasetOutput
+from .data_utils import default_transform, DataLabel, slide_windows_over_img, DatasetOutput
 
 class H5Imagenet(TorchDataset):
     def __init__(
@@ -33,24 +33,19 @@ class H5Imagenet(TorchDataset):
         img = self.transform(img)
 
         if self.get_sub_images:
-            sub_imgs = slide_windows_over_img(img, min_win_size=config.eval_min_size,
+            sub_images = slide_windows_over_img(img, min_win_size=config.eval_min_size,
                                           max_win_size=config.eval_max_size,
                                           nr_windows=self.nr_windows,
                                           stride=self.stride)
-            sub_imgs = torch.split(sub_imgs, self.batch_size)
+            sub_images = torch.split(sub_images, self.batch_size)
         else:
-            sub_imgs = img.unsqueeze(0)
-
-        if self.get_sub_images:
-            return (sub_imgs, DataLabel.NEGATIVE.value, idx, img)
-
-        sub_imgs = torch.tensor(0)
+            sub_images = torch.tensor(0)
 
         return DatasetOutput(
             image=img,
             label=DataLabel.NEGATIVE.value,
             idx=idx,
-            sub_images=sub_imgs
+            sub_images=sub_images
         )
 
     def __len__(self):
