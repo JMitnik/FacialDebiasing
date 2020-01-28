@@ -1,5 +1,6 @@
 import torch
 from torch.utils.data import Dataset as TorchDataset
+from .generic import GenericImageDataset
 import numpy as np
 import pandas as pd
 import os
@@ -8,7 +9,7 @@ from typing import Callable, Optional, List, Union
 from .data_utils import CountryEnum, DatasetOutput, SkinColorEnum, default_transform, DataLabel, GenderEnum, slide_windows_over_img
 from setup import config
 
-class PPBDataset(TorchDataset):
+class PPBDataset(GenericImageDataset):
     def __init__(
         self,
         path_to_images: str,
@@ -20,8 +21,10 @@ class PPBDataset(TorchDataset):
         batch_size: int = -1,
         transform: Callable = default_transform,
         get_sub_images: bool = False,
-        stride: float = 0.2
+        stride: float = 0.2,
+        **kwargs
     ):
+        super().__init__(**kwargs)
         self.path_to_images: str = path_to_images
         self.path_to_metadata: str = path_to_metadata
         self.filter_excl_gender: List[str] = filter_excl_gender
