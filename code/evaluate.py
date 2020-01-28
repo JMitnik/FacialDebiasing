@@ -17,10 +17,7 @@ from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
 
 def eval_model(model, data_loader):
-    """
-    perform evaluation of a single epoch
-    """
-
+    """Perform evaluation of a single epoch."""
     model.eval()
 
     count = 0
@@ -152,12 +149,11 @@ def main():
 
 #################### NEGATIVE SAMPLING ####################
     eval_loader: DataLoader = make_eval_loader(
-            batch_size=config.batch_size,
-            nr_windows=config.eval_nr_windows,
-            dataset_type=config.eval_dataset,
-            max_images=config.max_images
-        )
-
+        batch_size=config.batch_size,
+        nr_windows=config.eval_nr_windows,
+        dataset_type=config.eval_dataset,
+        max_images=config.max_images
+    )
 
     neg_count, count = eval_model(model, eval_loader)
     correct_neg = count - neg_count
