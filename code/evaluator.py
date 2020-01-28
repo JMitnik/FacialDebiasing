@@ -36,13 +36,10 @@ class Evaluator:
             raise Exception
 
         self.path_to_model = path_to_model
-        self.model: Db_vae = self._init_model(self.path_to_model) if model is None else model
+        self.model: Db_vae = Db_vae.init(self.path_to_model, self.device, self.z_dim) if model is None else model
         self.path_to_eval_dataset = path_to_eval_dataset
 
-    def _init_model(
-        self,
-        path_to_model
-    ):
+    def init_model(self, path_to_model):
         full_path_to_model = f"results/{path_to_model}/model.pt"
         if not os.path.exists(full_path_to_model):
             logger.error(

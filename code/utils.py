@@ -1,3 +1,4 @@
+from typing import List
 from logger import logger
 from datasets.generic import DatasetOutput
 import torch
@@ -9,6 +10,7 @@ import torchvision.transforms as transforms
 from torchvision.utils import make_grid
 import gc
 from collections import Counter
+from PIL import Image
 
 from setup import config
 from dataset import sample_dataset, sample_idxs_from_loader, sample_idxs_from_loaders
@@ -146,3 +148,43 @@ def write_hist(hist, epoch: int = 0):
             write_file.write(f"EPOCH: {epoch}\n")
             write_file.write(f"{str(hist)}\n")
             write_file.write(f"\n\n\n")
+
+def read_image(path_to_image):
+    img: Image = Image.open(path_to_image)
+
+    transforms = default_transforms()
+    img_tensor: torch.Tensor = transforms(img)
+
+    return img_tensor
+
+def read_flags(path_to_model):
+    path_to_flags = f"results/{path_to_model}/flags.txt"
+
+    with open(path_to_flags, 'r') as f:
+        data = f.readlines()
+
+def find_face_in_subimages(model, sub_images: torch.Tensor):
+    for images in sub_images:
+        if len(images.shape) == 5:
+            images = images.squeeze(dim=0)
+
+        # If one image
+        if len(images.shape) == 3:
+            images = images.view(1, 3, 64, 64)
+
+        images = images.to(config.device)
+        pred = model.forward_eval(images)
+
+        # If face
+        if (pred > 0).any():
+            return True
+
+    return False
+
+
+def default_transforms():
+    return transforms.Compose([
+        transforms.Resize((64, 64)),
+        transforms.ToTensor()
+    ])
+

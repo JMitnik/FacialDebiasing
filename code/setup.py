@@ -69,7 +69,7 @@ def create_folder_name(foldername):
 
 class Config(NamedTuple):
     # Path to CelebA images
-    path_to_celeba_images: str = 'data/celeba/images'
+    path_to_train_face_images: str = 'data/celeba/images'
     # Path to CelebA bounding-boxes
     path_to_celeba_bbox_file: str = 'data/celeba/list_bbox_celeba.txt'
     # Path to ImageNet images

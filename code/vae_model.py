@@ -4,6 +4,8 @@ Here the structure of the network is made in pytorch
 
 from typing import List, Union, Optional
 import torch
+import os
+from logger import logger
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
@@ -149,6 +151,22 @@ class Db_vae(nn.Module):
         self.means = torch.Tensor().to(self.device)
 
         self.alpha = alpha
+
+    @staticmethod
+    def init(path_to_model: str, device, z_dim):
+        full_path_to_model = f"results/{path_to_model}/model.pt"
+        if not os.path.exists(full_path_to_model):
+            logger.error(
+                f"Can't find model at {full_path_to_model}",
+                next_step="Evaluation will stop",
+                tip="Double check your path to model"
+            )
+            raise Exception
+
+        model: Db_vae = Db_vae(z_dim=z_dim, device=device)
+        model.load_state_dict(torch.load(full_path_to_model, map_location=device))
+
+        return model
 
 
     def forward(self, images: torch.Tensor, labels: torch.Tensor):

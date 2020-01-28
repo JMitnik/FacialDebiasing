@@ -24,7 +24,6 @@ def eval_model(model, data_loader):
     correct_count = 0
 
     for i, batch in enumerate(data_loader):
-        # print(f"batch number {i}")
         count += 1
         images_list, _, _ , _= batch
 
@@ -32,16 +31,10 @@ def eval_model(model, data_loader):
             if len(images.shape) == 5:
                 images = images.squeeze(dim=0)
 
-            batch_size = images.size(0)
-            # print(f"size: {batch_size}")
-
             images = images.to(config.device)
-
             pred = model.forward_eval(images)
 
-
             if (pred > 0).any():
-                # print("CORRECT")
                 correct_count += 1
                 break
 
