@@ -164,6 +164,8 @@ def read_flags(path_to_model):
         data = f.readlines()
 
 def find_face_in_subimages(model, sub_images: torch.Tensor):
+    model.eval()
+
     for images in sub_images:
         if len(images.shape) == 5:
             images = images.squeeze(dim=0)
@@ -171,7 +173,6 @@ def find_face_in_subimages(model, sub_images: torch.Tensor):
         # If one image
         if len(images.shape) == 3:
             images = images.view(1, 3, 64, 64)
-
         images = images.to(config.device)
         pred = model.forward_eval(images)
 
@@ -188,3 +189,7 @@ def default_transforms():
         transforms.ToTensor()
     ])
 
+
+def visualize_tensor(img_tensor: torch.Tensor):
+    pil_transformer = transforms.ToPILImage()
+    pil_transformer(img_tensor).show()

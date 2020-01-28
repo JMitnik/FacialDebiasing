@@ -1,4 +1,7 @@
+from utils import visualize_tensor
 from vae_model import Db_vae
+from pathlib import Path
+import numpy as np
 from evaluator import Evaluator
 from typing import Optional
 from trainer import Trainer
@@ -44,7 +47,26 @@ def classify_image(
 
      if utils.find_face_in_subimages(model, sub_images):
           logger.success("This is a face!")
+          return True
      else:
-          logger.success("This is NOT a face!")
+          logger.error("This is NOT a face!")
+          return False
 
-     return utils.find_face_in_subimages(model, sub_images)
+def classify_random_image(
+     model: Optional[Db_vae] = None,
+     path_to_model: Optional[str] = None,
+     z_dim: Optional[int] = None,
+     device: Optional[str] = None,
+     batch_size: int = 10
+):
+     path_to_data = 'data/**/*.jpg'
+     images = list(Path().glob(path_to_data))
+     idx = np.random.choice(len(images))
+
+     path_to_img = images[idx]
+     img = utils.read_image(path_to_img)
+
+     utils.visualize_tensor(img)
+     classify_image(path_to_img, path_to_model=path_to_model, z_dim=z_dim, device=device, batch_size=batch_size)
+
+classify_random_image(path_to_model='dante', z_dim=200, device=config.device)
