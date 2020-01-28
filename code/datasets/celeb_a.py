@@ -9,7 +9,7 @@ from typing import Callable
 
 from torch import float64
 
-from .generic import default_transform, DataLabel
+from .generic import default_transform, DataLabel, DatasetOutput
 
 # Default transform
 default_transform = transforms.Compose([
@@ -41,7 +41,14 @@ class CelebDataset(TorchDataset):
 
         label: int = DataLabel.POSITIVE.value
 
-        return img, label, idx
+        sub_images = torch.tensor(0)
+
+        return DatasetOutput(
+            img,
+            label,
+            idx,
+            sub_images=sub_images
+        )
 
     def sample(self, amount: int):
         max_idx: int = len(self)

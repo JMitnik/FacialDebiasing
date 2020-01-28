@@ -12,8 +12,13 @@ import utils
 import torch.nn as nn
 from datasets.generic import slide_windows_over_img
 
+config = Config(use_h5=True)
+
 def make_trainer(config: Config):
      return Trainer(**config._asdict())
+
+trainer = make_trainer(config)
+# trainer.train(10)
 
 def make_evaluator(config: Config):
      return Evaluator(
@@ -69,4 +74,4 @@ def classify_random_image(
      utils.visualize_tensor(img)
      classify_image(path_to_img, path_to_model=path_to_model, z_dim=z_dim, device=device, batch_size=batch_size)
 
-classify_random_image(path_to_model='dante', z_dim=200, device=config.device)
+# classify_random_image(path_to_model='dante', z_dim=200, device=config.device)

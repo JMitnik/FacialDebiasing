@@ -41,8 +41,8 @@ class DataLoaderTuple(NamedTuple):
 
 class DatasetOutput(NamedTuple):
     image: torch.FloatTensor
-    label: torch.LongTensor
-    idx: torch.LongTensor
+    label: int
+    idx: int
     sub_images: Optional[torch.Tensor] = None
 
 # Default transform

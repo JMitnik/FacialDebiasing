@@ -72,6 +72,7 @@ dependencies:
   - tk=8.6.8
   - torchvision=0.2.2
   - tornado=6.0.2
+  - tqdm=4.42.0
   - wheel=0.33.1
   - xorg-libxau=1.0.9
   - xorg-libxdmcp=1.1.3

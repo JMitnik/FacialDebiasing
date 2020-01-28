@@ -51,7 +51,8 @@ class Trainer:
 
         train_loaders, valid_loaders = make_train_and_valid_loaders(
             batch_size=batch_size,
-            max_images=max_images
+            max_images=max_images,
+            **kwargs
         )
 
         self.train_loaders = train_loaders
@@ -218,7 +219,7 @@ class Trainer:
 
         with torch.no_grad():
             for _, batch in enumerate(data_loader):
-                images, labels, index = batch
+                images, labels, index, _ = batch
                 images, labels, index = images.to(self.device), labels.to(self.device), index.to(self.device)
 
                 all_labels = torch.cat((all_labels, labels))

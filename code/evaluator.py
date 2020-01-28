@@ -27,32 +27,24 @@ class Evaluator:
         self.nr_windows = nr_windows
         self.stride = stride
 
-        if not model and not path_to_model:
-            logger.error(
-                "No model or path_to_model given",
-                next_step="Evaluation will not run",
-                tip="Instantiate with a trained model, or set `path_to_model`."
-            )
-            raise Exception
-
         self.path_to_model = path_to_model
-        self.model: Db_vae = Db_vae.init(self.path_to_model, self.device, self.z_dim) if model is None else model
+        self.model: Db_vae = self.init_model(path_to_model, model)
         self.path_to_eval_dataset = path_to_eval_dataset
 
-    def init_model(self, path_to_model):
-        full_path_to_model = f"results/{path_to_model}/model.pt"
-        if not os.path.exists(full_path_to_model):
-            logger.error(
-                f"Can't find model at {full_path_to_model}",
-                next_step="Evaluation will stop",
-                tip="Double check your path to model"
-            )
-            raise Exception
+    def init_model(self, path_to_model: Optional[str] = None, model: Optional[Db_vae] = None):
+        if model is not None:
+            return model
 
-        model: Db_vae = Db_vae(z_dim=self.z_dim, device=self.device)
-        model.load_state_dict(torch.load(full_path_to_model, map_location=self.device))
+        # If path_to_model, load model from file
+        if path_to_model:
+            return Db_vae.init(path_to_model, self.device, self.z_dim)
 
-        return model
+        logger.error(
+            "No model or path_to_model given",
+            next_step="Evaluation will not run",
+            tip="Instantiate with a trained model, or set `path_to_model`."
+        )
+        raise Exception
 
     def eval(
         self,
@@ -150,6 +142,3 @@ class Evaluator:
         print(f"Amount of labels:{count}, Correct labels:{correct_count}")
 
         return correct_count, count
-
-
-

@@ -78,11 +78,13 @@ def make_train_and_valid_loaders(
     proportion_faces: float = 0.5,
     enable_debias: bool = True,
     sample_bias_with_replacement: bool = True,
+    use_h5: bool = True,
+    **kwargs
 ):
     nr_images: Optional[int] = max_images if max_images >= 0 else None
 
     # Create the datasets
-    if config.use_h5:
+    if use_h5:
         celeb_dataset, imagenet_dataset = make_h5_datasets()
     else:
         imagenet_dataset = ImagenetDataset(config.path_to_imagenet_images)

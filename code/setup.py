@@ -1,4 +1,5 @@
 from typing import NamedTuple
+from types import SimpleNamespace
 import torch
 import datetime
 import os
@@ -48,7 +49,16 @@ parser.add_argument('--save_sub_images', type=bool,
                     help='Save images')
 parser.add_argument('--hist_size', type=bool,
                     help='Number of histogram')
-ARGS = parser.parse_args()
+
+class EmptyObject():
+    def __getattribute__(self, idx):
+        return None
+
+try:
+    ARGS = parser.parse_args()
+except:
+    logger.warning("It looks like this is run from Jupyter.")
+    ARGS = EmptyObject()
 
 num_workers = 5 if ARGS.num_workers is None else ARGS.num_workers
 
@@ -69,7 +79,7 @@ def create_folder_name(foldername):
 
 class Config(NamedTuple):
     # Path to CelebA images
-    path_to_train_face_images: str = 'data/celeba/images'
+    path_to_celeba_images: str = 'data/celeba/images'
     # Path to CelebA bounding-boxes
     path_to_celeba_bbox_file: str = 'data/celeba/list_bbox_celeba.txt'
     # Path to ImageNet images

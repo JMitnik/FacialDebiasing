@@ -5,7 +5,7 @@ import pandas as pd
 import os
 from PIL import Image
 from typing import Callable, Optional, List, Union
-from .generic import CountryEnum, SkinColorEnum, default_transform, DataLabel, GenderEnum, slide_windows_over_img
+from .generic import CountryEnum, DatasetOutput, SkinColorEnum, default_transform, DataLabel, GenderEnum, slide_windows_over_img
 from setup import config
 
 class PPBDataset(TorchDataset):
@@ -68,7 +68,12 @@ class PPBDataset(TorchDataset):
 
         label = DataLabel.POSITIVE.value
 
-        return (imgs, label, idx, img)
+        return DatasetOutput(
+            image=img,
+            label=label,
+            idx=idx,
+            sub_images=imgs
+        )
 
     def __len__(self):
         return len(self.df_metadata)
