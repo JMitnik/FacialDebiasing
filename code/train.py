@@ -195,7 +195,8 @@ def main():
         with open(f"results/{config.run_folder}/training_results.csv", "a") as wf:
             wf.write(f"{epoch}, {train_loss}, {val_loss}, {train_acc}, {val_acc}\n")
 
-        torch.save(model.state_dict(), f"results/{config.run_folder}/model.pt")
+        if (epoch%10 == 0) or (epoch > 40):
+            torch.save(model.state_dict(), f"results/{config.run_folder}/model{epoch}.pt")
 
 if __name__ == "__main__":
     init_trainining_results()
