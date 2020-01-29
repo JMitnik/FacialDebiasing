@@ -11,6 +11,9 @@ from datasets.data_utils import DataLoaderTuple, DatasetOutput
 import utils
 from dataset import make_hist_loader, make_train_and_valid_loaders, concat_datasets
 
+from torchvision.utils import make_grid
+from matplotlib import pyplot as plt
+
 class Trainer:
     def __init__(
         self,
@@ -253,3 +256,66 @@ class Trainer:
         utils.visualize_bias(probs, data_loader, all_labels, all_index, epoch)
 
         return probs
+
+    def sample(self, n_rows=4):
+        n_samples = n_rows**2
+        sample_images = self.model.sample(n_samples = n_samples)
+
+        plt.figure(figsize=(n_rows*2,n_rows*2))
+        grid = make_grid(sample_images.reshape(n_samples,3,64,64), n_rows)
+        plt.imshow(grid.permute(1,2,0).cpu())
+
+        utils.remove_frame(plt)
+        plt.show()
+
+        return
+
+    def reconstruction_samples(self, n_rows=4):
+        valid_data = concat_datasets(self.valid_loaders.faces.dataset, self.valid_loaders.nonfaces.dataset, proportion_a=0.5)
+        fig = utils.print_reconstruction(self.model, valid_data, 0, save=False)
+
+        fig.show()
+
+        return
+    
+    def best_and_worst(self, n_rows=4):
+        """Calculates the validation error of the model."""
+        face_loader, nonface_loader = self.valid_loaders
+
+        self.model.eval()
+        avg_loss = 0
+        avg_acc = 0
+
+        all_labels = torch.tensor([], dtype=torch.long).to(self.device)
+        all_preds = torch.tensor([]).to(self.device)
+        all_idxs = torch.tensor([], dtype=torch.long).to(self.device)
+
+        count = 0
+
+        with torch.no_grad():
+            for i, (face_batch, nonface_batch) in enumerate(zip(face_loader, nonface_loader)):
+                images, labels, idxs = utils.concat_batches(face_batch, nonface_batch)
+
+                images = images.to(self.device)
+                labels = labels.to(self.device)
+                idxs = idxs.to(self.device)
+                pred, loss = self.model.forward(images, labels)
+
+                loss = loss.mean()
+                acc = utils.calculate_accuracy(labels, pred)
+
+                avg_loss += loss.item()
+                avg_acc += acc
+
+                all_labels = torch.cat((all_labels, labels))
+                all_preds = torch.cat((all_preds, pred))
+                all_idxs = torch.cat((all_idxs, idxs))
+
+                count = i
+
+        best_faces, worst_faces, best_other, worst_other = utils.get_best_and_worst_predictions(all_labels, all_preds)
+        fig = utils.visualize_best_and_worst(self.valid_loaders, all_labels, all_idxs, 0, best_faces, worst_faces, best_other, worst_other, save=False)
+
+        fig.show()
+
+        return 

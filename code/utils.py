@@ -53,7 +53,7 @@ def remove_frame(plt):
     for tick in frame.axes.get_yticklines():
         tick.set_visible(False)
 
-def print_reconstruction(model, data, epoch, n_rows=4):
+def print_reconstruction(model, data, epoch, n_rows=4, save=True):
     # TODO: Add annotation
     model.eval()
     n_samples = n_rows**2
@@ -76,9 +76,13 @@ def print_reconstruction(model, data, epoch, n_rows=4):
 
     remove_frame(plt)
 
-    fig.savefig('results/{}/reconstructions/epoch={}'.format(config.run_folder, epoch), bbox_inches='tight')
 
-    plt.close()
+    if save:
+        fig.savefig('results/{}/reconstructions/epoch={}'.format(config.run_folder, epoch), bbox_inches='tight')
+
+        plt.close()
+    else:
+        return fig
 
 def concat_batches(batch_a: DatasetOutput, batch_b: DatasetOutput):
     """Concatenates two batches of data of shape image x label x idx."""
@@ -88,7 +92,7 @@ def concat_batches(batch_a: DatasetOutput, batch_b: DatasetOutput):
 
     return images, labels, idxs
 
-def visualize_best_and_worst(data_loaders, all_labels, all_indices, epoch, best_faces, worst_faces, best_other, worst_other, n_rows=4):
+def visualize_best_and_worst(data_loaders, all_labels, all_indices, epoch, best_faces, worst_faces, best_other, worst_other, n_rows=4, save=True):
     # TODO: Add annotation
     n_samples = n_rows**2
 
@@ -107,10 +111,13 @@ def visualize_best_and_worst(data_loaders, all_labels, all_indices, epoch, best_
 
         remove_frame(plt)
 
+    if save:
+        fig.savefig('results/{}/best_and_worst/epoch:{}'.format(config.run_folder,epoch), bbox_inches='tight')
 
-    fig.savefig('results/{}/best_and_worst/epoch:{}'.format(config.run_folder,epoch), bbox_inches='tight')
+        plt.close()
 
-    plt.close()
+    else:
+        return fig
 
 
 def visualize_bias(probs, data_loader, all_labels, all_index, epoch, n_rows=3):

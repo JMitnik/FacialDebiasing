@@ -23,9 +23,19 @@ class Logger:
         full_datetime_stamp = current_datetime.strftime("%d_%m_%Y-%H_%M_%S")
         current_date_stamp = current_datetime.strftime("%d_%m_%Y")
 
-        stdout_handler = logging.StreamHandler(sys.stdout)
-        handlers = [stdout_handler]
-        logging.basicConfig(handlers=handlers, format='\n%(asctime)s - %(levelname)s  - %(message)s', datefmt='%d-%b-%y %H:%M:%S', level=logging.INFO)
+        log = logging.getLogger('my_logger')
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setLevel(logging.INFO)
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+
+        # handler.setFormatter('\n%(asctime)s - %(levelname)s  - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
+        log.addHandler(handler)
+        log.setLevel(logging.INFO)
+
+        self.logging = log
+
 
     def info(self, message, next_step: Optional[str] = None):
         log_str = ""
@@ -34,7 +44,7 @@ class Logger:
         if next_step:
             log_str += f"\n\t {self.sym_result} {next_step}"
 
-        logging.info(log_str)
+        self.logging.info(log_str)
 
     def error(self, message, next_step: Optional[str] = None, tip: Optional[str] = None):
         log_str = ""
@@ -46,7 +56,7 @@ class Logger:
         if tip:
             log_str += f"\n\t {self.sym_tip} {tip}"
 
-        logging.error(log_str)
+        self.logging.error(log_str)
 
     def success(self, message, next_step: Optional[str] = None):
         log_str = ""
@@ -55,7 +65,7 @@ class Logger:
         if next_step:
             log_str += f"\n\t {self.sym_result} {next_step}"
 
-        logging.info(log_str)
+        self.logging.info(log_str)
 
     def warning(self, message, next_step: Optional[str] = None, tip: Optional[str] = None):
         log_str = ""
@@ -67,18 +77,18 @@ class Logger:
         if tip:
             log_str += f"\n\t {self.sym_tip} {tip}"
 
-        logging.error(log_str)
+        self.logging.error(log_str)
 
     def important(self, message):
         log_str = ""
         log_str += f" {str(self.sym_important)} {message} \n"
 
-        logging.info(log_str)
+        self.logging.info(log_str)
 
     def save(self, message):
         log_str = ""
         log_str += f" {str(self.sym_save)} {message} \n"
 
-        logging.info(log_str)
+        self.logging.info(log_str)
 
 logger = Logger()

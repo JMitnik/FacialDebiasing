@@ -16,12 +16,12 @@ import utils
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
 
-def eval_model(model, data_loader):
+def eval_model(model, data_loader: DataLoaderTuple):
     """Perform evaluation of a single epoch."""
     model.eval()
 
-    count = 0
-    correct_count = 0
+    count: int = 0
+    correct_count: int = 0
 
     for i, batch in enumerate(data_loader):
         count += 1
@@ -31,8 +31,8 @@ def eval_model(model, data_loader):
             if len(images.shape) == 5:
                 images = images.squeeze(dim=0)
 
-            images = images.to(config.device)
-            pred = model.forward_eval(images)
+            images: torch.Tensor = images.to(config.device)
+            pred: torch.Tensor = model.forward_eval(images)
 
             if (pred > 0).any():
                 correct_count += 1
@@ -42,7 +42,7 @@ def eval_model(model, data_loader):
 
     return correct_count, count
 
-def interpolate_images(model, amount):
+def interpolate_images(model, amount: int):
     eval_loader: DataLoader = make_eval_loader(
         batch_size=config.batch_size,
         nr_windows=config.sub_images_nr_windows,
@@ -63,7 +63,7 @@ def interpolate_images(model, amount):
             break
 
     images = torch.stack((image_1, image_2)).to(config.device)
-    recon_images = model.interpolate(images, amount)
+    recon_images: torch.Tensor = model.interpolate(images, amount)
 
     fig=plt.figure(figsize=(16, 16))
 
@@ -103,11 +103,11 @@ def main():
     # interpolate_images(model, 20)
     # return
 
-    losses = []
-    recalls = []
+    losses: list = []
+    recalls: list = []
 
-    correct_pos = 0
-    total_count = 0
+    correct_pos: int = 0
+    total_count: int = 0
 
     
     for i in range(4):
@@ -121,7 +121,7 @@ def main():
 
         correct_count, count = eval_model(model, eval_loader)
 
-        recall = correct_count/count * 100
+        recall: float = correct_count/count * 100
         correct_pos += correct_count
         total_count += count
 
@@ -129,7 +129,7 @@ def main():
 
         recalls.append(recall)
 
-    avg_recall = correct_pos/total_count*100
+    avg_recall: float = correct_pos/total_count*100
     print(f"Recall => all:{avg_recall:.3f}, dark male: {recalls[0]:.3f}, dark female: {recalls[1]:.3f}, light male: {recalls[2]:.3f}, light female: {recalls[3]:.3f}")
     print(f"Variance => {(torch.Tensor(recalls)).var().item():.3f}")
 
@@ -141,9 +141,8 @@ def main():
         max_images=config.max_images
     )
 
-    neg_count, count = eval_model(model, eval_loader)
-    correct_neg = count - neg_count
-    neg_recall = (correct_neg/count) * 100
+    incorrect_neg, count = eval_model(model, eval_loader)
+    correct_neg: int = count - incorrect_neg
 
     wf = open(f"results/{config.path_to_model}/{config.eval_name}", 'a+')
 

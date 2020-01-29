@@ -46,16 +46,27 @@ class Evaluator:
         )
         raise Exception
 
-    def eval(self, filter_exclude_skin_color: List[str] = [], filter_exclude_gender: List[str] = []):
+    def eval(self, filter_exclude_skin_color: List[str] = [], filter_exclude_gender: List[str] = [], 
+                   dataset_type: str= ""):
         self.model.eval()
 
-        eval_loader: DataLoader = make_eval_loader(
-            batch_size=self.batch_size,
-            filter_exclude_skin_color=filter_exclude_skin_color,
-            filter_exclude_gender=filter_exclude_gender,
-            nr_windows=self.nr_windows,
-            stride=self.stride
-        )
+        if dataset_type == "":
+            eval_loader: DataLoader = make_eval_loader(
+                batch_size=self.batch_size,
+                filter_exclude_skin_color=filter_exclude_skin_color,
+                filter_exclude_gender=filter_exclude_gender,
+                nr_windows=self.nr_windows,
+                stride=self.stride,
+            )
+        else:
+            eval_loader: DataLoader = make_eval_loader(
+                batch_size=self.batch_size,
+                filter_exclude_skin_color=filter_exclude_skin_color,
+                filter_exclude_gender=filter_exclude_gender,
+                nr_windows=self.nr_windows,
+                stride=self.stride,
+                dataset_type=dataset_type
+            )
 
         correct_count, count = self.eval_model(eval_loader)
         return correct_count, count
@@ -70,11 +81,6 @@ class Evaluator:
         recalls = []
         correct_pos = 0
         total_count = 0
-
-        # Write and init the results and the header
-        wf = open(f"results/{self.path_to_model}/{eval_name}", 'a+')
-        wf.write(f"name,dark male,dark female,light male,light female,var,precision,recall,accuracy\n")
-        wf.write(f"{self.path_to_model}")
 
         for i in range(4):
             logger.info(f"Running setup for {name_list[i]}")
@@ -92,7 +98,6 @@ class Evaluator:
 
             # Log the recall
             logger.info(f"Recall for {name_list[i]} is {recall:.3f}")
-            wf.write(f",{recall:.3f}")
             recalls.append(recall)
 
         # Calculate the average recall
@@ -101,7 +106,14 @@ class Evaluator:
         # Logger info
         logger.info(f"Recall => all:{avg_recall:.3f}, dark male: {recalls[0]:.3f}, dark female: {recalls[1]:.3f}, white male: {recalls[2]:.3f}, white female: {recalls[3]:.3f}")
         logger.info(f"Variance => {(torch.tensor(recalls)).var().item():.3f}")
-        wf.write(f",{(torch.tensor(recalls)).var().item():.3f}")
+
+        incorrect_neg, count = self.eval()
+        correct_neg: int = count - incorrect_neg
+
+        with open(f"results/{config.path_to_model}/{config.eval_name}", 'a+') as write_file:
+            write_file.write(f"name,dark male,dark female,light male,light female,var,precision,recall,accuracy\n")
+            write_file.write(f"{config.path_to_model}_{config.model_name}")
+            write_file.write(f",{recalls[0]:.3f},{recalls[1]:.3f},{recalls[2]:.3f},{recalls[3]:.3f},{(torch.Tensor(recalls)).var().item():.3f},{correct_pos/(correct_pos + neg_count)*100:.3f},{avg_recall:.3f},{(correct_pos + correct_neg)/(2*1270)*100:.3f}\n")
 
         logger.success("Finished evaluation!")
 

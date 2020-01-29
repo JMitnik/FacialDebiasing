@@ -37,9 +37,9 @@ parser.add_argument("--debug_mode", type=bool,
                         help='Debug mode')
 parser.add_argument("--use_h5", type=bool,
                         help='Use h5')
-parser.add_argument("--folder_name", type=str, default="{}".format(datetime.datetime.now().strftime("%d_%m_%Y---%H_%M_%S")),
+parser.add_argument("--folder_name", type=str,
                         help='folder_name_to_save in')
-parser.add_argument("--eval_name", type=str, default="evaluation_results.txt",
+parser.add_argument("--eval_name", type=str,
                         help='eval name')
 parser.add_argument('--stride', type=float,
                     help='importance of debiasing')
@@ -47,7 +47,7 @@ parser.add_argument('--eval_dataset', type=str,
                     help='Name of eval dataset [ppb/h5_imagenet/h5]')
 parser.add_argument('--save_sub_images', type=bool,
                     help='Save images')
-parser.add_argument('--model_name', type=str, default="model.pt",
+parser.add_argument('--model_name', type=str,
                     help='name of the model to evaluate')
 parser.add_argument('--hist_size', type=bool,
                     help='Number of histogram')
@@ -80,22 +80,25 @@ def create_folder_name(foldername):
             suffix = f'_{count}'
 
 class Config(NamedTuple):
+    # Folder name of the run
+    run_folder: str = create_folder_name(ARGS.folder_name) if ARGS.folder_name is not None \
+                      else create_folder_name(str(datetime.datetime.now().strftime("%d_%m_%Y---%H_%M_%S")))
     # Path to CelebA images
-    path_to_celeba_images: str = 'data/celeba/images'
+    path_to_celeba_images: str = '../../data/celeba/images'
     # Path to CelebA bounding-boxes
-    path_to_celeba_bbox_file: str = 'data/celeba/list_bbox_celeba.txt'
+    path_to_celeba_bbox_file: str = '../../data/celeba/list_bbox_celeba.txt'
     # Path to ImageNet images
-    path_to_imagenet_images: str = 'data/imagenet'
+    path_to_imagenet_images: str = '../../data/imagenet'
     # Path to evaluation images (Faces)
-    path_to_eval_face_images: str = 'data/ppb/imgs'
+    path_to_eval_face_images: str = '../../data/ppb/imgs'
     # Path to evaluation metadata
-    path_to_eval_metadata: str = 'data/ppb/PPB-2017-metadata.csv'
+    path_to_eval_metadata: str = '../../data/ppb/PPB-2017-metadata.csv'
     # Path to evaluation images (Nonfaces such as Imagenet)
-    path_to_eval_nonface_images: str = 'data/imagenet'
+    path_to_eval_nonface_images: str = '../../data/imagenet'
     # Path to stored model
-    path_to_model: Optional[str] = ARGS.path_to_model or None
+    path_to_model: Optional[str] = ARGS.path_to_model or run_folder
     # Path to h5
-    path_to_h5_train: str = 'data/h5_train/train_face.h5'
+    path_to_h5_train: str = '../../data/h5_train/train_face.h5'
     # Type of debiasing used
     debias_type: str = ARGS.debias_type or 'none'
     # name of the model to evaluate
@@ -104,10 +107,8 @@ class Config(NamedTuple):
     random_seed: int = 0
     # Device to use
     device: torch.device = DEVICE
-    # Folder name of the run
-    run_folder: str = create_folder_name(ARGS.folder_name)
     # eval file name
-    eval_name: str = ARGS.eval_name
+    eval_name: str = ARGS.eval_name or "evaluation_results.txt"
     # Batch size
     batch_size: int = ARGS.batch_size or 256
     # Number of bins

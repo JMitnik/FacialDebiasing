@@ -22,22 +22,27 @@ import datetime
 import numpy as np
 from scipy.stats import norm
 
-def update_histogram(model, data_loader, epoch):
+def update_histogram(model, data_loader: DataLoaderTuple, epoch: int):
+    '''
+        TODO docstring
+    '''
+
     # reset the means and histograms
 
     print(f"update weight histogram using method: {config.debias_type}")
     # model.hist = torch.ones((config.zdim, model.num_bins)).to(config.device)
     model.means = torch.Tensor().to(config.device)
 
-    all_labels = torch.tensor([], dtype=torch.long).to(config.device)
-    all_index = torch.tensor([], dtype=torch.long).to(config.device)
+    all_labels: torch.LongTensor = torch.tensor([], dtype=torch.long).to(config.device)
+    all_index: torch.LongTensor = torch.tensor([], dtype=torch.long).to(config.device)
 
     with torch.no_grad():
         for i, batch in enumerate(data_loader):
             images, labels, index = batch
 
             #TEMPORARY TAKE ONLY FACES
-            images, labels, index = images.to(config.device), labels.to(config.device), index.to(config.device)
+            images, labels, index = images.to(config.device), 
+                                    labels.to(config.device), index.to(config.device)
             batch_size = labels.size(0)
 
             all_labels = torch.cat((all_labels, labels))
@@ -80,8 +85,7 @@ def train_epoch(model, data_loaders: DataLoaderTuple, optimizer):
 
     # TODO: divide the batch-size of the loader over both face_Batch and nonface_batch, rather than doubling the batch-size
     for i, (face_batch, nonface_batch) in enumerate(zip(face_loader, nonface_loader)):
-        images, labels, idxs = utils.concat_batches(face_batch, nonface_batch)
-        batch_size = labels.size(0)
+        images, labels, _ = utils.concat_batches(face_batch, nonface_batch)
 
         images, labels = images.to(config.device), labels.to(config.device)
 
@@ -107,7 +111,7 @@ def train_epoch(model, data_loaders: DataLoaderTuple, optimizer):
 
     return avg_loss/(count+1), avg_acc/(count+1)
 
-def eval_epoch(model, data_loaders: DataLoaderTuple, epoch):
+def eval_epoch(model, data_loaders: DataLoaderTuple, epoch: int):
     """
     Calculates the validation error of the model
     """
@@ -126,7 +130,6 @@ def eval_epoch(model, data_loaders: DataLoaderTuple, epoch):
     with torch.no_grad():
         for i, (face_batch, nonface_batch) in enumerate(zip(face_loader, nonface_loader)):
             images, labels, idxs = utils.concat_batches(face_batch, nonface_batch)
-            batch_size = labels.size(0)
 
             images = images.to(config.device)
             labels = labels.to(config.device)
@@ -162,7 +165,7 @@ def main():
     )
 
     # Initialize model
-    model = vae_model.Db_vae(z_dim=config.zdim, device=config.device, alpha=config.alpha, num_bins=config.num_bins).to(config.device)
+    model = vae_model.Db_vae(z_dim=config.z_dim, device=config.device, alpha=config.alpha, num_bins=config.num_bins).to(config.device)
 
     # Initialize optimizer
     optimizer = torch.optim.Adam(model.parameters())
@@ -192,8 +195,8 @@ def main():
         valid_data = concat_datasets(valid_loaders.faces.dataset, valid_loaders.nonfaces.dataset, proportion_a=0.5)
         utils.print_reconstruction(model, valid_data, epoch)
 
-        with open(f"results/{config.run_folder}/training_results.csv", "a") as wf:
-            wf.write(f"{epoch}, {train_loss}, {val_loss}, {train_acc}, {val_acc}\n")
+        with open(f"results/{config.run_folder}/training_results.csv", "a") as write_file:
+            write_file.write(f"{epoch}, {train_loss}, {val_loss}, {train_acc}, {val_acc}\n")
 
         if (epoch%10 == 0) or (epoch > 40):
             torch.save(model.state_dict(), f"results/{config.run_folder}/model{epoch}.pt")

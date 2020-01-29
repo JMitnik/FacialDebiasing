@@ -3,6 +3,7 @@ import torchvision.transforms as transforms
 import os
 import pandas as pd
 from PIL import Image
+from logger import logger
 
 # Default transform
 default_transform = transforms.Compose([
