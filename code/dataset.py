@@ -73,8 +73,8 @@ def make_h5_datasets(path_to_h5_train: str, **kwargs):
         files_faces: h5py.Dataset = files[idxs_faces.tolist()]
         files_nonfaces: h5py.Dataset = files[idxs_nonfaces.tolist()]
 
-        dataset_nonfaces: H5Imagenet = H5Imagenet(files_nonfaces, **kwargs)
-        dataset_faces: H5CelebA = H5CelebA(files_faces, **kwargs)
+        dataset_nonfaces: H5Imagenet = H5Imagenet(files_nonfaces, path_to_images='', **kwargs)
+        dataset_faces: H5CelebA = H5CelebA(files_faces, path_to_images='', **kwargs)
 
         return dataset_faces, dataset_nonfaces
 

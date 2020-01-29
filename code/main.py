@@ -18,9 +18,10 @@ def make_trainer(config: Config):
      return Trainer(**config._asdict())
 
 trainer = make_trainer(config)
-trainer.train(10)
+# trainer.train(10)
 
 def make_evaluator(config: Config):
+     """Creates an Evaluator object which is ready to .eval on, or .eval_on_setups in case of the automated experience. """
      return Evaluator(
           nr_windows=config.sub_images_nr_windows,
           path_to_eval_dataset=config.path_to_eval_face_images,
