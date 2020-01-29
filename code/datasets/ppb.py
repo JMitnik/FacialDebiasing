@@ -2,6 +2,7 @@ import torch
 from torch.utils.data import Dataset as TorchDataset
 from .generic import GenericImageDataset
 import numpy as np
+from logger import logger
 import pandas as pd
 import os
 from PIL import Image
@@ -33,6 +34,20 @@ class PPBDataset(GenericImageDataset):
 
         self.classification_label = 1
 
+    def init_store(self, path_to_metadata):
+        if not os.path.exists(path_to_metadata):
+            logger.error(f"Path to metadata (and probably PPB) does not exist at {path_to_metadata}!")
+            raise Exception
+
+        try:
+            store = self._apply_filters_to_metadata(pd.read_csv(path_to_metadata, delim_whitespace=True))
+            return store
+        except:
+            logger.error(
+                f"Unable to read the metadata file located at {path_to_metadata}"
+            )
+
+
     def _apply_filters_to_metadata(self, df: pd.DataFrame):
         result = df
 
@@ -43,14 +58,19 @@ class PPBDataset(GenericImageDataset):
             result = result.query('gender not in @self.filter_excl_gender')
 
         if len(self.filter_excl_skin_color):
-            result = result.query('bi_fitz not in @self.filter_excl_skin_color')
+            try:
+                result = result.query('bi_fitz not in @self.filter_excl_skin_color')
+            except:
+                logger.error("bi_fitz can't be found in the metadata datadframe",
+                             next_step="The skin color wont be applied",
+                             tip="Rename the bi.fitz column to be bi_fitz in the metadata csv")
 
         return result
 
     def read_image(self, idx: int):
         return Image.open(os.path.join(
             self.path_to_images,
-            self.store
+            self.store.iloc[idx].filename
         ))
 
     def __len__(self):

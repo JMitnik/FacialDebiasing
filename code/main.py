@@ -12,7 +12,7 @@ import utils
 import torch.nn as nn
 from datasets.data_utils import slide_windows_over_img
 
-config = Config()
+config = Config(path_to_model='29_01_2020---03_07_40')
 
 def make_trainer(config: Config):
      return Trainer(**config._asdict())
@@ -27,6 +27,9 @@ def make_evaluator(config: Config):
           path_to_eval_dataset=config.path_to_eval_face_images,
           **config._asdict()
      )
+
+evaluator = make_evaluator(config)
+evaluator.eval_on_setups('Test')
 
 def classify_image(
      path_to_image: str,

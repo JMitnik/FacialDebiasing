@@ -33,11 +33,11 @@ class Evaluator:
 
     def init_model(self, path_to_model: Optional[str] = None, model: Optional[Db_vae] = None):
         if model is not None:
-            return model
+            return model.to(self.device)
 
         # If path_to_model, load model from file
         if path_to_model:
-            return Db_vae.init(path_to_model, self.device, self.z_dim)
+            return Db_vae.init(path_to_model, self.device, self.z_dim).to(self.device)
 
         logger.error(
             "No model or path_to_model given",
@@ -103,6 +103,8 @@ class Evaluator:
         logger.info(f"Variance => {(torch.tensor(recalls)).var().item():.3f}")
         wf.write(f",{(torch.tensor(recalls)).var().item():.3f}")
 
+        logger.success("Finished evaluation!")
+
     def eval_model(self, eval_loader: DataLoader):
         """Perform evaluation of a single epoch."""
         self.model.eval()
@@ -113,7 +115,7 @@ class Evaluator:
         # Iterate over all images and their sub_images
         for _, batch in enumerate(eval_loader):
             count += 1
-            sub_images, _, _ , _= batch
+            _, _, _ , sub_images = batch
 
             for images in sub_images:
                 if len(images.shape) == 5:
@@ -127,6 +129,6 @@ class Evaluator:
                     correct_count += 1
                     break
 
-        print(f"Amount of labels:{count}, Correct labels:{correct_count}")
+        logger.info(f"Amount of labels:{count}, Correct labels:{correct_count}")
 
         return correct_count, count

@@ -148,6 +148,7 @@ def make_eval_loader(
             filter_excl_country=filter_exclude_country,
             filter_excl_gender=filter_exclude_gender,
             filter_excl_skin_color=filter_exclude_skin_color,
+            get_sub_images=True,
             **kwargs
         )
     elif dataset_type == EvalDatasetType.IMAGENET_ONLY.value:
@@ -155,6 +156,8 @@ def make_eval_loader(
 
         dataset = ImagenetDataset(
             path_to_images=config.path_to_eval_nonface_images,
+            get_sub_images=True
+            **kwargs
         )
     else:
         logger.info('Evaluating on Imagenet H5')
@@ -165,6 +168,7 @@ def make_eval_loader(
             path_to_images='',
             h5_dataset=h5_nonfaces.dataset,
             get_sub_images=True
+            **kwargs
         )
 
     nr_images: Optional[int] = max_images if max_images >= 0 else None
