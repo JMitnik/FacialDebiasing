@@ -26,7 +26,7 @@ class Trainer:
         lr: float = 0.001,
         eval_freq: int = 10,
         optimizer = torch.optim.Adam,
-        path_to_folder: Optional[str] = None,
+        run_folder: Optional[str] = None,
         custom_encoding_layers: Optional[nn.Sequential] = None,
         custom_decoding_layers: Optional[nn.Sequential] = None,
         **kwargs
@@ -38,7 +38,7 @@ class Trainer:
         self.debias_type = debias_type
         self.device = device
         self.eval_freq = eval_freq
-        self.path_to_folder = path_to_folder
+        self.run_folder = run_folder
 
         self.model: Db_vae = Db_vae(
             z_dim=z_dim,
@@ -93,11 +93,14 @@ class Trainer:
             valid_data = concat_datasets(self.valid_loaders.faces.dataset, self.valid_loaders.nonfaces.dataset, proportion_a=0.5)
             utils.print_reconstruction(self.model, valid_data, epoch)
 
+            # Save model and scores
+            self._save_epoch(epoch, train_loss, val_loss, train_acc, val_acc)
+
         logger.success(f"Finished training on {epochs} epochs.")
 
     def _save_epoch(self, epoch: int, train_loss: float, val_loss: float, train_acc: float, val_acc: float):
         """Writes training and validation scores to a csv, and stores a model to disk."""
-        if not self.path_to_folder:
+        if not self.run_folder:
             logger.warning(f"`--run_folder` could not be found.",
                            f"The program will continue, but won't save anything",
                            f"Double-check if --run_folder is configured."
@@ -106,12 +109,12 @@ class Trainer:
             return
 
         # Write epoch metrics
-        path_to_results = f"results/{self.path_to_folder}/training_results.csv"
+        path_to_results = f"results/{self.run_folder}/training_results.csv"
         with open(path_to_results, "a") as wf:
             wf.write(f"{epoch}, {train_loss}, {val_loss}, {train_acc}, {val_acc}\n")
 
         # Write model to disk
-        path_to_model = f"results/{self.path_to_folder}/model.pt"
+        path_to_model = f"results/{self.run_folder}/model.pt"
         torch.save(self.model.state_dict(), path_to_model)
 
         logger.save("Stored model and results")
