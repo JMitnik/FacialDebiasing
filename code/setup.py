@@ -184,4 +184,3 @@ def init_trainining_results():
         wf.write(f"use_h5: {config.use_h5}\n")
 
 config = Config()
-print(f"Config => {config}")

@@ -60,9 +60,9 @@ class GenericImageDataset(Dataset):
             )
 
         return DatasetOutput(
-            image=img,
-            label=self.classification_label,
-            idx=idx,
+            image=tensor_img,
+            label=torch.tensor(self.classification_label),
+            idx=torch.tensor(idx).long(),
             sub_images=sub_images
         )
 
@@ -70,3 +70,6 @@ class GenericImageDataset(Dataset):
     def read_image(self, idx: int):
         """Interface, returns an PIL Image using the index."""
         pass
+
+    def __len__(self):
+        return len(self.store)

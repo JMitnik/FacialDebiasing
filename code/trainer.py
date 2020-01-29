@@ -5,6 +5,7 @@ from datetime import datetime
 from logger import logger
 from torch.utils.data.dataset import Dataset
 
+from setup import init_trainining_results
 from vae_model import Db_vae
 from datasets.data_utils import DataLoaderTuple, DatasetOutput
 import utils
@@ -30,6 +31,7 @@ class Trainer:
         custom_decoding_layers: Optional[nn.Sequential] = None,
         **kwargs
     ):
+        init_trainining_results()
         self.epochs = epochs
         self.z_dim = z_dim
         self.batch_size = batch_size
@@ -42,8 +44,10 @@ class Trainer:
             z_dim=z_dim,
             hist_size=hist_size,
             alpha=alpha,
-            num_bins=num_bins
-        )
+            num_bins=num_bins,
+            device=self.device
+        ).to(device=self.device)
+
         self.optimizer = optimizer(params=self.model.parameters(), lr=lr)
 
         train_loaders: DataLoaderTuple

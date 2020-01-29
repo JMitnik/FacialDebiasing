@@ -15,10 +15,11 @@ class CelebDataset(GenericImageDataset):
 
     def __init__(self, path_to_bbox: str, **kwargs):
         super().__init__(**kwargs)
-        self.store: pd.DataFrame = pd.read_table(path_to_bbox, delim_whitespace=True)
+
+        self.store: pd.DataFrame = self.init_store(path_to_bbox)
         self.classification_label = 1
 
-    def read_images(self, idx: int):
+    def read_image(self, idx: int):
         img: Image = Image.open(os.path.join(
             self.path_to_images,
             self.store.iloc[idx].image_id)
@@ -28,3 +29,16 @@ class CelebDataset(GenericImageDataset):
 
     def __len__(self):
         return len(self.store)
+
+    def init_store(self, path_to_bbox):
+        if not os.path.exists(path_to_bbox):
+            logger.error(f"Path to bbox does not exist at {path_to_bbox}!")
+            raise Exception
+
+        try:
+            store = pd.read_table(path_to_bbox, delim_whitespace=True)
+            return store
+        except:
+            logger.error(
+                f"Unable to read the bbox file located at {path_to_bbox}"
+            )

@@ -18,7 +18,7 @@ def make_trainer(config: Config):
      return Trainer(**config._asdict())
 
 trainer = make_trainer(config)
-# trainer.train(10)
+trainer.train(10)
 
 def make_evaluator(config: Config):
      return Evaluator(

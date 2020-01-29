@@ -16,7 +16,7 @@ class ImagenetDataset(GenericImageDataset):
     def read_image(self, idx: int):
         img: Image = Image.open(
             self.store[idx]
-        )
+        ).convert("RGB")
 
         return img
 
@@ -30,3 +30,6 @@ class ImagenetDataset(GenericImageDataset):
             )
 
         return list(Path().glob(f'{self.path_to_images}/**/*.jpg'))
+
+    def __len__(self):
+        return len(self.store)
