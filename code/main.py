@@ -12,7 +12,7 @@ import utils
 import torch.nn as nn
 from datasets.data_utils import slide_windows_over_img
 
-config = Config(use_h5=True)
+config = Config()
 
 def make_trainer(config: Config):
      return Trainer(**config._asdict())

@@ -1,5 +1,6 @@
 from enum import Enum
 from datasets.h5celeba import H5CelebA
+import os
 from datasets.h5imagenet import H5Imagenet
 import torch
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, WeightedRandomSampler, BatchSampler, SequentialSampler
@@ -53,7 +54,15 @@ def concat_datasets(dataset_a, dataset_b, proportion_a: Optional[float] = None):
 
     return ConcatDataset([sampled_dataset_a, sampled_dataset_b])
 
-def make_h5_datasets(**kwargs):
+def make_h5_datasets(path_to_h5_train: str, **kwargs):
+    if not os.path.exists(path_to_h5_train):
+        logger.error(
+            f"Unable to find h5 file for training file at {path_to_h5_train}",
+            next_step="Will stop training / evaluation",
+            tip="Double check your path_to_h5_train in the config, and check if you downloaded the appropriate .h5 file"
+        )
+        raise Exception
+    
     with h5py.File(config.path_to_h5_train, mode='r') as h5_file:
         labels = h5_file['labels'][()].flatten()
         files = h5_file['images']

@@ -22,11 +22,7 @@ class Logger:
         current_datetime = datetime.now()
         full_datetime_stamp = current_datetime.strftime("%d_%m_%Y-%H_%M_%S")
         current_date_stamp = current_datetime.strftime("%d_%m_%Y")
-        log_filename = 'results/logs/{}/run_{}.log'.format(current_date_stamp, full_datetime_stamp)
 
-        os.makedirs(os.path.dirname(log_filename), exist_ok=True)
-
-        file_handler = logging.FileHandler(filename=log_filename, encoding='utf-8')
         stdout_handler = logging.StreamHandler(sys.stdout)
         handlers = [stdout_handler]
         logging.basicConfig(handlers=handlers, format='\n%(asctime)s - %(levelname)s  - %(message)s', datefmt='%d-%b-%y %H:%M:%S', level=logging.INFO)
@@ -51,18 +47,6 @@ class Logger:
             log_str += f"\n\t {self.sym_tip} {tip}"
 
         logging.error(log_str)
-
-    def exception(self, message, next_step: Optional[str] = None):
-        log_str = ""
-        log_str += f" {str(self.sym_error)} {message} \n"
-
-        if next_step:
-            log_str += f"\n\t {self.sym_result} {next_step}"
-
-        if tip:
-            log_str += f"\n\t {self.sym_tip} {tip}"
-
-        logging.exception(log_str)
 
     def success(self, message, next_step: Optional[str] = None):
         log_str = ""
