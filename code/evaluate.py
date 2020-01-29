@@ -97,7 +97,7 @@ def main():
     if not config.path_to_model:
         raise Exception('Load up a model using --path_to_model')
 
-    model.load_state_dict(torch.load(f"results/{config.path_to_model}/model.pt", map_location=config.device))
+    model.load_state_dict(torch.load(f"results/{config.path_to_model}/{config.model_name}", map_location=config.device))
     model.eval()
 
     # interpolate_images(model, 20)
@@ -109,10 +109,7 @@ def main():
     correct_pos = 0
     total_count = 0
 
-    wf = open(f"results/{config.path_to_model}/{config.eval_name}", 'a+')
-
-    wf.write(f"name,dark male,dark female,light male,light female,var,precision,recall,accuracy\n")
-    wf.write(f"{config.path_to_model}")
+    
     for i in range(4):
         eval_loader: DataLoader = make_eval_loader(
             batch_size=config.batch_size,
@@ -130,15 +127,11 @@ def main():
 
         print(f"{name_list[i]} => recall:{recall:.3f}")
 
-        wf.write(f",{recall:.3f}")
-
         recalls.append(recall)
 
     avg_recall = correct_pos/total_count*100
-    print(f"Recall => all:{avg_recall:.3f}, dark male: {recalls[0]:.3f}, dark female: {recalls[1]:.3f}, white male: {recalls[2]:.3f}, white female: {recalls[3]:.3f}")
+    print(f"Recall => all:{avg_recall:.3f}, dark male: {recalls[0]:.3f}, dark female: {recalls[1]:.3f}, light male: {recalls[2]:.3f}, light female: {recalls[3]:.3f}")
     print(f"Variance => {(torch.Tensor(recalls)).var().item():.3f}")
-
-    wf.write(f",{(torch.Tensor(recalls)).var().item():.3f}")
 
 #################### NEGATIVE SAMPLING ####################
     eval_loader: DataLoader = make_eval_loader(
@@ -152,7 +145,11 @@ def main():
     correct_neg = count - neg_count
     neg_recall = (correct_neg/count) * 100
 
-    wf.write(f",{correct_pos/(correct_pos + neg_count)*100:.3f},{avg_recall:.3f},{(correct_pos + correct_neg)/(2*1270)*100:.3f}\n")
+    wf = open(f"results/{config.path_to_model}/{config.eval_name}", 'a+')
+
+    wf.write(f"name,dark male,dark female,light male,light female,var,precision,recall,accuracy\n")
+    wf.write(f"{config.path_to_model}_{config.model_name}")
+    wf.write(f",{recalls[0]:.3f},{recalls[1]:.3f},{recalls[2]:.3f},{recalls[3]:.3f},{(torch.Tensor(recalls)).var().item():.3f},{correct_pos/(correct_pos + neg_count)*100:.3f},{avg_recall:.3f},{(correct_pos + correct_neg)/(2*1270)*100:.3f}\n")
 
     wf.close()
     return

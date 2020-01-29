@@ -9,6 +9,7 @@ from logger import logger
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+from scipy.stats import norm
 
 class Encoder(nn.Module):
     """
@@ -146,9 +147,11 @@ class Db_vae(nn.Module):
         # self.num_bins = 500
         self.min_val = -15
         self.max_val = 15
-
-        self.hist = torch.ones((z_dim, self.num_bins)).to(self.device)
+        self.xlin = np.linspace(self.min_val, self.max_val, self.num_bins).reshape(1,1,self.num_bins)
+        self.hist = np.zeros((z_dim, self.num_bins))
+        # self.hist = torch.ones((z_dim, self.num_bins)).to(self.device)
         self.means = torch.Tensor().to(self.device)
+        self.std = torch.Tensor().to(self.device)
 
         self.alpha = alpha
 
@@ -264,20 +267,23 @@ class Db_vae(nn.Module):
             functions
         """
 
-        samples_per_dist = 1000
+        # samples_per_dist = 1000
 
-        _, mean, log_std = self.encoder(input)
+        _, mean, std = self.encoder(input)
 
         self.means = torch.cat((self.means, mean))
-
-        dist = torch.distributions.normal.Normal(mean, log_std)
-        z = dist.rsample((samples_per_dist,)).to(self.device)
+        self.std = torch.cat((self.std, std))
+        
+        values = norm.pdf(self.xlin, mean.unsqueeze(-1).cpu(), std.unsqueeze(-1).cpu()).sum(0)
+        self.hist += values
+        # dist = torch.distributions.normal.Normal(mean, std)
+        # z = dist.rsample((samples_per_dist,)).to(self.device)
         # NOTE those samples are added to the first axis!
 
-        self.hist += torch.stack([torch.histc(z[:, :, i],
-                                  min=self.min_val,
-                                  max=self.max_val,
-                                  bins=self.num_bins) for i in range(self.z_dim)])
+        # self.hist += torch.stack([torch.histc(z[:, :, i],
+        #                           min=self.min_val,
+        #                           max=self.max_val,
+        #                           bins=self.num_bins) for i in range(self.z_dim)])
 
         return
 
@@ -305,7 +311,7 @@ class Db_vae(nn.Module):
 
         return probs
 
-    def get_histo_logsum(self):
+    def get_histo_max5(self):
         probs = torch.zeros_like(self.means, dtype=float).to(self.device)
 
         for i in range(self.z_dim):
@@ -325,43 +331,39 @@ class Db_vae(nn.Module):
 
             probs[:,i] = torch.Tensor(p).to(self.device)
 
-        probs = torch.log(probs)
-        probs = probs.sum(1)
-        probs = 1.0/probs
+        probs = probs.sort(1, descending=True)[0][:,:5]
+        probs = probs.prod(1)
 
-        probs /= probs.sum()
-
+        print(probs)
         return probs
 
     def get_histo_our(self):
         """
             Returns the probabilities given the means given the histo values
         """
+        results = np.empty(self.means.shape[0])
+        hist_batch_size = 4000
+        # Iterate in large batches over dataset to prevent memory lockup
+        for i in range(0, self.means.shape[0], hist_batch_size):
+            i_end = i  + hist_batch_size
+            if i_end > self.means.shape[0]:
+                i_end = self.means.shape[0]
+            mean = self.means[i:i_end, :]
+            std = self.std[i:i_end, :]
 
-        smooth = self.hist + self.alpha
 
-        norm_smooth = smooth / smooth.sum(-1).view(-1,1)
-        probs = 1 / norm_smooth
-        probs = probs / probs.sum(-1).view(-1,1)
+            lins = norm.pdf(self.xlin, mean.unsqueeze(-1).cpu(), std.unsqueeze(-1).cpu())
+            Q = lins * self.hist
+            Q = Q.sum(-1)
+            W = 1 / (Q + self.alpha)
+            # Performing the max value technique, TODO: analyse top 5
+            results[i:i_end] = W.max(-1)
 
-        weights = torch.Tensor([]).to(self.device)
-        for mu in self.means:
-            # Gets probability for each
-            newhist = torch.stack([torch.histc(i,
-                                  min=self.min_val,
-                                  max=self.max_val,
-                                  bins=self.num_bins) for i in mu])
-            newhist *= probs
-            newhist = newhist.sum(dim=1)
-
-            res = 1 / -torch.log(newhist).sum()
-
-            weights = torch.cat((weights, res.view(1)))
-
-        # Reset values
-        self.hist = torch.ones((self.z_dim, self.num_bins)).to(self.device)
+        # # Reset values
+        self.hist.fill(0)
         self.means = torch.Tensor().to(self.device)
-        return weights / weights.sum()
+        self.std = torch.Tensor().to(self.device)
+        return torch.tensor(results).to(self.device)
 
     def recon_images(self, images):
         with torch.no_grad():
