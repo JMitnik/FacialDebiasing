@@ -45,7 +45,7 @@ def eval_model(model, data_loader):
 def interpolate_images(model, amount):
     eval_loader: DataLoader = make_eval_loader(
         batch_size=config.batch_size,
-        nr_windows=config.eval_nr_windows,
+        nr_windows=config.sub_images_nr_windows,
     )
 
     image_1 = []
@@ -118,7 +118,7 @@ def main():
             batch_size=config.batch_size,
             filter_exclude_skin_color=skin_list[i],
             filter_exclude_gender=gender_list[i],
-            nr_windows=config.eval_nr_windows,
+            nr_windows=config.sub_images_nr_windows,
             stride=config.stride
         )
 
@@ -143,7 +143,7 @@ def main():
 #################### NEGATIVE SAMPLING ####################
     eval_loader: DataLoader = make_eval_loader(
         batch_size=config.batch_size,
-        nr_windows=config.eval_nr_windows,
+        nr_windows=config.sub_images_nr_windows,
         dataset_type=config.eval_dataset,
         max_images=config.max_images
     )

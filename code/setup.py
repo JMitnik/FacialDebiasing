@@ -125,7 +125,7 @@ class Config(NamedTuple):
     # Image size
     image_size: int = 64
     # Number windows evaluation
-    eval_nr_windows: int = 15
+    sub_images_nr_windows: int = 15
     # Evaluation window minimum
     eval_min_size: int = 30
     # Evaluation window maximum
@@ -140,6 +140,14 @@ class Config(NamedTuple):
     save_sub_images: bool = False if ARGS.save_sub_images is None else ARGS.save_sub_images
     # Hist size
     hist_size: int = 1000 if ARGS.hist_size is None else ARGS.hist_size
+    # Batch size for how many sub images to batch
+    sub_images_batch_size: int = 10
+    # Minimum size for sub images
+    sub_images_min_size: int = 30
+    # Maximum size for sub images
+    sub_images_max_size: int = 64
+    # Stride of sub images
+    sub_images_stride: float = 0.2
 
 
 def init_trainining_results():

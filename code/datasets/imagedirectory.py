@@ -2,7 +2,7 @@ from datasets.generic import GenericImageDataset
 from pathlib import Path
 from PIL import Image
 
-class ImagenetDataset(GenericImageDataset):
+class ImageDirectory(GenericImageDataset):
     def __init__(
         self,
         **kwargs
@@ -10,7 +10,6 @@ class ImagenetDataset(GenericImageDataset):
         super().__init__(**kwargs)
 
         self.store = self.init_store()
-        self.classification_label = 0
 
     def read_image(self, idx: int):
         img: Image = Image.open(

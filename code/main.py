@@ -22,7 +22,7 @@ trainer = make_trainer(config)
 
 def make_evaluator(config: Config):
      return Evaluator(
-          nr_windows=config.eval_nr_windows,
+          nr_windows=config.sub_images_nr_windows,
           path_to_eval_dataset=config.path_to_eval_face_images,
           **config._asdict()
      )

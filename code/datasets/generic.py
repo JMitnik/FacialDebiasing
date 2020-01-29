@@ -1,16 +1,16 @@
-from datasets.data_utils import default_transform
+
+from torchvision.transforms import ToPILImage
+from datasets.data_utils import DatasetOutput, default_transform
 from typing import Callable
 from PIL import Image
-from data_utils import slide_windows_over_img
+from .data_utils import slide_windows_over_img, DatasetOutput
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
 
 class GenericImageDataset(Dataset):
-
     def __init__(
         self,
-        store,
         path_to_images: str,
         get_sub_images: bool = False,
         sub_images_nr_windows: int = 10,
@@ -35,11 +35,13 @@ class GenericImageDataset(Dataset):
         self.sub_images_batch_size = sub_images_batch_size
         self.sub_images_stride = sub_images_stride
 
+        self.pil_transformer = ToPILImage()
+
         # Create store for data
-        self.store = self.init_store()
+        self.store = None
 
     def __getitem__(self, idx: int):
-        # Read the image from the dataset collection using the index
+        # Read the image from the store index, and a dataset-defined `.read_image`
         img: Image = self.read_image(idx)
 
         # Apply transformation to the image
@@ -57,11 +59,14 @@ class GenericImageDataset(Dataset):
                 stride=self.sub_images_stride
             )
 
+        return DatasetOutput(
+            image=img,
+            label=self.classification_label,
+            idx=idx,
+            sub_images=sub_images
+        )
+
 
     def read_image(self, idx: int):
-        """Interface, returns an image tensor using the index."""
-        pass
-
-    def init_store(self, **kwargs):
-        """Method which creates a store to index. Create a store such as a Dataframe."""
+        """Interface, returns an PIL Image using the index."""
         pass

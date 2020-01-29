@@ -53,7 +53,7 @@ def concat_datasets(dataset_a, dataset_b, proportion_a: Optional[float] = None):
 
     return ConcatDataset([sampled_dataset_a, sampled_dataset_b])
 
-def make_h5_datasets():
+def make_h5_datasets(**kwargs):
     with h5py.File(config.path_to_h5_train, mode='r') as h5_file:
         labels = h5_file['labels'][()].flatten()
         files = h5_file['images']
@@ -64,8 +64,8 @@ def make_h5_datasets():
         files_faces: h5py.Dataset = files[idxs_faces.tolist()]
         files_nonfaces: h5py.Dataset = files[idxs_nonfaces.tolist()]
 
-        dataset_nonfaces: H5Imagenet = H5Imagenet(files_nonfaces)
-        dataset_faces: H5CelebA = H5CelebA(files_faces)
+        dataset_nonfaces: H5Imagenet = H5Imagenet(files_nonfaces, **kwargs)
+        dataset_faces: H5CelebA = H5CelebA(files_faces, **kwargs)
 
         return dataset_faces, dataset_nonfaces
 
@@ -85,10 +85,10 @@ def make_train_and_valid_loaders(
 
     # Create the datasets
     if use_h5:
-        celeb_dataset, imagenet_dataset = make_h5_datasets()
+        celeb_dataset, imagenet_dataset = make_h5_datasets(**kwargs)
     else:
-        imagenet_dataset = ImagenetDataset(config.path_to_imagenet_images)
-        celeb_dataset = CelebDataset(config.path_to_celeba_images, config.path_to_celeba_bbox_file)
+        imagenet_dataset = ImagenetDataset(path_to_images=config.path_to_imagenet_images, **kwargs)
+        celeb_dataset = CelebDataset(path_to_images=config.path_to_celeba_images, path_to_bbox=config.path_to_celeba_bbox_file, **kwargs)
 
     # Split both datasets into training and validation
     celeb_train, celeb_valid = split_dataset(celeb_dataset, train_size, nr_images)
@@ -127,14 +127,10 @@ def make_eval_loader(
     filter_exclude_skin_color: List[str] = [],
     max_images: int = -1,
     proportion_faces: float = 0.5,
-    batch_size: int = 16,
-    nr_windows: int = 10,
-    stride: float = 0.2,
-    dataset_type: str = EvalDatasetType.PBB_ONLY.value
+    dataset_type: str = EvalDatasetType.PBB_ONLY.value,
+    **kwargs
 ):
-
     if dataset_type == EvalDatasetType.PBB_ONLY.value:
-    # Define faces dataset
         logger.info('Evaluating on PPB')
 
         dataset = PPBDataset(
@@ -143,31 +139,23 @@ def make_eval_loader(
             filter_excl_country=filter_exclude_country,
             filter_excl_gender=filter_exclude_gender,
             filter_excl_skin_color=filter_exclude_skin_color,
-            nr_windows=nr_windows,
-            batch_size=batch_size,
-            get_sub_images=True,
-            stride=stride
+            **kwargs
         )
     elif dataset_type == EvalDatasetType.IMAGENET_ONLY.value:
         logger.info('Evaluating on Imagenet')
 
         dataset = ImagenetDataset(
             path_to_images=config.path_to_eval_nonface_images,
-            batch_size=batch_size,
-            get_sub_images=True,
-            stride=stride,
-            nr_windows=nr_windows
         )
     else:
         logger.info('Evaluating on Imagenet H5')
 
         _, h5_nonfaces = make_h5_datasets()
+
         dataset = H5Imagenet(
+            path_to_images='',
             h5_dataset=h5_nonfaces.dataset,
-            get_sub_images=True,
-            nr_windows=nr_windows,
-            stride=stride,
-            batch_size=batch_size
+            get_sub_images=True
         )
 
     nr_images: Optional[int] = max_images if max_images >= 0 else None
