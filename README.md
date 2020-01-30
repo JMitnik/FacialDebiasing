@@ -39,7 +39,7 @@ This will by default download the data into code/data.
 
 The 'h5' dataset for training can be downloaded from [this url](https://www.dropbox.com/s/l5iqduhe0gwxumq/train_face.h5?dl=1) and the eval dataset can be downloaded from [this url](https://www.dropbox.com/s/l0lp6qxeplumouf/PPB.tar?dl=1).
 
-It is recommended to put the training dataset h5-file in 'data/h5_train', and the evaluation dataset (so that metadata file and the imgs folder are in this directory)  in 'data/ppb', resulting in 'data/ppb/*-metadata.csv' and 'data/ppb/imgs/*.jpg'.
+❗It is recommended to put the training dataset h5-file in 'data/h5_train', and the evaluation dataset (so that metadata file and the imgs folder are in this directory)  in 'data/ppb', resulting in 'data/ppb/*-metadata.csv' and 'data/ppb/imgs/*.jpg'.
 
 <!-- TODO: Add manual dataset -->
 
