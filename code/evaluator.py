@@ -106,7 +106,7 @@ class Evaluator:
         avg_recall = correct_pos/total_count*100
         variance = (torch.tensor(recalls)).var().item()
 
-        incorrect_neg, neg_count = self.eval()
+        incorrect_neg, neg_count = self.eval('h5_imagenet')
         correct_neg: int = neg_count - incorrect_neg
 
         precision = correct_pos/(correct_pos + neg_count)*100
