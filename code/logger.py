@@ -17,6 +17,16 @@ class Logger:
 
         self._setup(debug)
 
+    def set_notebook_syntax(self):
+        self.sym_error = '❎'
+        self.sym_success = '✅'
+        self.sym_result = '➡️'
+        self.sym_tip = '🔍'
+        self.sym_warning = '⚠️'
+        self.sym_important = '❗'
+        self.sym_save = '💿'
+
+
     def _setup(self, debug: bool):
         # Create a log file
         current_datetime = datetime.now()

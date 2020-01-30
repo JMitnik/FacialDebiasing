@@ -81,16 +81,16 @@ def create_folder_name(foldername):
             count += 1
             suffix = f'_{count}'
 
-def create_run_folder():
-    if ARGS.folder_name:
-        return create_folder_name(ARGS.folder_name)
+def create_run_folder(folder_name):
+    if len(folder_name) > 0:
+        return create_folder_name(folder_name)
 
     return create_folder_name(str(datetime.datetime.now().strftime("%d_%m_%Y---%H_%M_%S")))
 
 @dataclass
 class Config:
     # Folder name of the run
-    run_folder: str = ''
+    run_folder: str = '' if ARGS.folder_name is None else ARGS.folder_name
     # Path to CelebA images
     path_to_celeba_images: str = '../../data/celeba/images'
     # Path to CelebA bounding-boxes
@@ -104,7 +104,7 @@ class Config:
     # Path to evaluation images (Nonfaces such as Imagenet)
     path_to_eval_nonface_images: str = '../../data/imagenet'
     # Path to stored model
-    path_to_model: Optional[str] = ARGS.path_to_model or run_folder
+    path_to_model: Optional[str] = ARGS.path_to_model
     # Path to h5
     path_to_h5_train: str = '../../data/h5_train/train_face.h5'
     # Type of debiasing used
@@ -163,7 +163,7 @@ class Config:
     sub_images_stride: float = 0.2
 
     def __post_init__(self):
-        self.run_folder = create_run_folder()
+        self.run_folder = create_run_folder(self.run_folder)
 
 
 def init_trainining_results(config: Config):

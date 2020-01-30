@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 from vae_model import Db_vae
 from dataset import make_eval_loader
+from dataclasses import asdict
 
 class Evaluator:
     def __init__(
@@ -29,6 +30,8 @@ class Evaluator:
         self.model_name = model_name
         self.nr_windows = nr_windows
         self.stride = stride
+
+        self.config = config
 
         self.path_to_model = path_to_model
         self.model: Db_vae = self.init_model(path_to_model, model)
@@ -55,20 +58,16 @@ class Evaluator:
 
         if dataset_type == "":
             eval_loader: DataLoader = make_eval_loader(
-                batch_size=self.batch_size,
                 filter_exclude_skin_color=filter_exclude_skin_color,
                 filter_exclude_gender=filter_exclude_gender,
-                nr_windows=self.nr_windows,
-                stride=self.stride,
+                **asdict(self.config)
             )
         else:
             eval_loader: DataLoader = make_eval_loader(
-                batch_size=self.batch_size,
                 filter_exclude_skin_color=filter_exclude_skin_color,
                 filter_exclude_gender=filter_exclude_gender,
-                nr_windows=self.nr_windows,
-                stride=self.stride,
-                dataset_type=dataset_type
+                dataset_type=dataset_type,
+                **asdict(self.config)
             )
 
         correct_count, count = self.eval_model(eval_loader)
@@ -123,7 +122,7 @@ class Evaluator:
         logger.info(f"Precision => {precision:.3f}")
         logger.info(f"Accuracy => {accuracy:.3f}")
 
-        with open(f"results/{self.path_to_model}/{self.eval_name}", 'a+') as write_file:
+        with open(f"results/{self.path_to_model}/{eval_name}", 'a+') as write_file:
             write_file.write(f"name,dark male,dark female,light male,light female,var,precision,recall,accuracy\n")
             write_file.write(f"{self.path_to_model}_{self.model_name}")
             write_file.write(f",{recalls[0]:.3f},{recalls[1]:.3f},{recalls[2]:.3f},{recalls[3]:.3f},{variance:.3f},{precision:.3f},{avg_recall:.3f},{accuracy:.3f}\n")

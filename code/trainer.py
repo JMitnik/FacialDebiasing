@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from typing import Optional
 from datetime import datetime
+import os
 from logger import logger
 from torch.utils.data.dataset import Dataset
 
@@ -9,7 +10,7 @@ from setup import init_trainining_results
 from vae_model import Db_vae
 from datasets.data_utils import DataLoaderTuple, DatasetOutput
 import utils
-from dataset import make_hist_loader, make_train_and_valid_loaders, concat_datasets
+from dataset import make_hist_loader, make_train_and_valid_loaders, concat_datasets, sample_dataset
 
 from torchvision.utils import make_grid
 from matplotlib import pyplot as plt
@@ -29,30 +30,39 @@ class Trainer:
         lr: float = 0.001,
         eval_freq: int = 10,
         optimizer = torch.optim.Adam,
+        load_model: bool = False,
         run_folder: Optional[str] = None,
         custom_encoding_layers: Optional[nn.Sequential] = None,
         custom_decoding_layers: Optional[nn.Sequential] = None,
-        config: Optional = None
+        path_to_model: Optional[str] = None,
+        config: Optional = None,
         **kwargs
     ):
         init_trainining_results(config)
         self.epochs = epochs
+        self.load_model = load_model
         self.z_dim = z_dim
+        self.path_to_model = path_to_model
         self.batch_size = batch_size
+        self.hist_size = hist_size
+        self.alpha = alpha
+        self.num_bins = num_bins
         self.debias_type = debias_type
         self.device = device
         self.eval_freq = eval_freq
         self.run_folder = run_folder
 
         self.config = config
-
-        self.model: Db_vae = Db_vae(
+        
+        new_model: Db_vae = Db_vae(
             z_dim=z_dim,
             hist_size=hist_size,
             alpha=alpha,
             num_bins=num_bins,
             device=self.device
         ).to(device=self.device)
+
+        self.model = self.init_model()
 
         self.optimizer = optimizer(params=self.model.parameters(), lr=lr)
 
@@ -67,6 +77,39 @@ class Trainer:
 
         self.train_loaders = train_loaders
         self.valid_loaders = valid_loaders
+
+    def init_model(self):
+        # If model is loaded from file-system
+        if self.load_model:
+            if self.path_to_model is None:
+                logger.error(
+                    "Path has not been set.",
+                    next_step="Model will not be initialized.",
+                    tip="Set a path_to_model in your config."
+                )
+                raise Exception
+
+            if not os.path.exists(f"results/{self.path_to_model}"):
+                logger.error(
+                    f"Can't find model at results/{self.path_to_model}.",
+                    next_step="Model will not be initialized.",
+                    tip=f"Check if the directory results/{self.path_to_model} exists."
+                )
+                raise Exception
+            
+            logger.info(f"Initializing model from {self.path_to_model}")
+            return Db_vae.init(self.path_to_model, self.device, self.z_dim).to(self.device)
+
+        # Model is newly initialized 
+        logger.info(f"Creating new model.")
+        return Db_vae(
+            z_dim=self.z_dim,
+            hist_size=self.hist_size,
+            alpha=self.alpha,
+            num_bins=self.num_bins,
+            device=self.device
+        ).to(device=self.device)
+
 
     def train(self, epochs: Optional[int] = None):
         # Optionally use passed epochs
@@ -117,13 +160,13 @@ class Trainer:
         grid = make_grid(images.reshape(n_samples,3,64,64), n_rows)
         plt.imshow(grid.permute(1,2,0).cpu())
 
-        remove_frame(plt)
+        utils.remove_frame(plt)
 
         fig.add_subplot(1, 2, 2)
         grid = make_grid(recon_images.reshape(n_samples,3,64,64), n_rows)
         plt.imshow(grid.permute(1,2,0).cpu())
 
-        remove_frame(plt)
+        utils.remove_frame(plt)
 
         if save:
             fig.savefig('results/{}/reconstructions/epoch={}'.format(self.config.run_folder, epoch), bbox_inches='tight')
@@ -154,15 +197,15 @@ class Trainer:
 
         logger.save("Stored model and results")
 
-    def visualize_bias(probs, data_loader, all_labels, all_index, epoch, n_rows=3):
+    def visualize_bias(self, probs, data_loader, all_labels, all_index, epoch, n_rows=3):
         # TODO: Add annotation
         n_samples = n_rows ** 2
 
         highest_probs = probs.argsort(descending=True)[:n_samples]
         lowest_probs = probs.argsort()[:n_samples]
 
-        highest_imgs = sample_idxs_from_loader(all_index[highest_probs], data_loader, 1)
-        worst_imgs = sample_idxs_from_loader(all_index[lowest_probs], data_loader, 1)
+        highest_imgs = utils.sample_idxs_from_loader(all_index[highest_probs], data_loader, 1)
+        worst_imgs = utils.sample_idxs_from_loader(all_index[lowest_probs], data_loader, 1)
 
         img_list = (highest_imgs, worst_imgs)
         titles = ("Highest", "Lowest")
@@ -174,7 +217,7 @@ class Trainer:
             plt.imshow(grid.permute(1,2,0).cpu())
             ax.set_title(titles[i], fontdict={"fontsize":30})
 
-            remove_frame(plt)
+            utils.remove_frame(plt)
 
         fig.savefig('results/{}/bias_probs/epoch={}'.format(self.config.run_folder, epoch), bbox_inches='tight')
         plt.close()
@@ -268,7 +311,6 @@ class Trainer:
 
         if self.debias_type != 'none':
             hist = self._update_histogram(hist_loader, epoch)
-            utils.write_hist(hist, epoch)
             self.train_loaders.faces.sampler.weights = hist
         else:
             self.train_loaders.faces.sampler.weights = torch.ones(len(self.train_loaders.faces.sampler.weights))
@@ -278,8 +320,8 @@ class Trainer:
         """Updates the histogram of `self.model`."""
         logger.info(f"Updating weight histogram using method: {self.debias_type}")
 
-        self.model.hist = torch.ones((self.z_dim, self.model.num_bins)).to(self.device)
         self.model.means = torch.Tensor().to(self.device)
+        self.model.std = torch.Tensor().to(self.device)
 
         all_labels = torch.tensor([], dtype=torch.long).to(self.device)
         all_index = torch.tensor([], dtype=torch.long).to(self.device)
@@ -310,7 +352,7 @@ class Trainer:
                             tip="Set --debias_method to 'base' or 'our'.")
                 raise Exception()
 
-        utils.visualize_bias(probs, data_loader, all_labels, all_index, epoch)
+        self.visualize_bias(probs, data_loader, all_labels, all_index, epoch)
 
         return probs
 
@@ -336,7 +378,7 @@ class Trainer:
         return
 
     
-    def visualize_best_and_worst(data_loaders, all_labels, all_indices, epoch, best_faces, worst_faces, best_other, worst_other, n_rows=4, save=True):
+    def visualize_best_and_worst(self, data_loaders, all_labels, all_indices, epoch, best_faces, worst_faces, best_other, worst_other, n_rows=4, save=True):
         # TODO: Add annotation
         n_samples = n_rows**2
 
@@ -345,15 +387,14 @@ class Trainer:
         sub_titles = ["Best faces", "Worst faces", "Best non-faces", "Worst non-faces"]
         for i, indices in enumerate((best_faces, worst_faces, best_other, worst_other)):
             labels, indices = all_labels[indices], all_indices[indices]
-
-            images = sample_idxs_from_loaders(indices, data_loaders, labels[0])
+            images = utils.sample_idxs_from_loaders(indices, data_loaders, labels[0])
 
             ax = fig.add_subplot(2, 2, i+1)
             grid = make_grid(images.reshape(n_samples,3,64,64), n_rows)
             plt.imshow(grid.permute(1,2,0).cpu())
             ax.set_title(sub_titles[i], fontdict={"fontsize":30})
 
-            remove_frame(plt)
+            utils.remove_frame(plt)
 
         if save:
             fig.savefig('results/{}/best_and_worst/epoch:{}'.format(self.config.run_folder, epoch), bbox_inches='tight')
@@ -400,7 +441,7 @@ class Trainer:
                 count = i
 
         best_faces, worst_faces, best_other, worst_other = utils.get_best_and_worst_predictions(all_labels, all_preds, self.device)
-        fig = utils.visualize_best_and_worst(self.valid_loaders, all_labels, all_idxs, 0, best_faces, worst_faces, best_other, worst_other, save=False)
+        fig = self.visualize_best_and_worst(self.valid_loaders, all_labels, all_idxs, 0, best_faces, worst_faces, best_other, worst_other, save=False)
 
         fig.show()
 

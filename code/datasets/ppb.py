@@ -8,7 +8,6 @@ import os
 from PIL import Image
 from typing import Callable, Optional, List, Union
 from .data_utils import CountryEnum, DatasetOutput, SkinColorEnum, default_transform, DataLabel, GenderEnum, slide_windows_over_img
-from setup import config
 
 class PPBDataset(GenericImageDataset):
     def __init__(

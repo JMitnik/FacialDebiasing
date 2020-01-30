@@ -4,7 +4,6 @@ from torch.utils.data.dataset import Subset
 from torch.utils.data.sampler import RandomSampler
 import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
-from setup import config
 import os
 import numpy as np
 import pandas as pd
