@@ -11,9 +11,10 @@ from logger import logger
 import utils
 import torch.nn as nn
 from datasets.data_utils import slide_windows_over_img
+from dataclasses import asdict
 
 def make_trainer(config: Config):
-     return Trainer(**config._asdict())
+     return Trainer(**asdict(config))
 
 # trainer = make_trainer(config)
 # trainer.train(10)
@@ -79,4 +80,4 @@ def classify_random_image(
 # classify_random_image(path_to_model='dante', z_dim=200, device=config.device)
 
 if __name__ == "__main__":
-     
+     config = Config()

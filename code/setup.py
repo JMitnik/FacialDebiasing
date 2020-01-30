@@ -6,6 +6,7 @@ import os
 import argparse
 from logger import logger
 from typing import Optional
+from dataclasses import dataclass, field
 
 # Default device
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -51,16 +52,17 @@ parser.add_argument('--model_name', type=str,
                     help='name of the model to evaluate')
 parser.add_argument('--hist_size', type=bool,
                     help='Number of histogram')
+parser.add_argument('-f', type=str,
+                    help='Path to kernel json')
+
 
 class EmptyObject():
     def __getattribute__(self, idx):
         return None
 
-try:
-    ARGS = parser.parse_args()
-except:
-    logger.warning("It looks like this is run from Jupyter.")
-    ARGS = EmptyObject()
+ARGS, unknown = parser.parse_known_args()
+if len(unknown) > 0:
+    logger.warning(f'There are some unknown args: {unknown}')
 
 num_workers = 5 if ARGS.num_workers is None else ARGS.num_workers
 
@@ -79,10 +81,16 @@ def create_folder_name(foldername):
             count += 1
             suffix = f'_{count}'
 
-class Config(NamedTuple):
+def create_run_folder():
+    if ARGS.folder_name:
+        return create_folder_name(ARGS.folder_name)
+
+    return create_folder_name(str(datetime.datetime.now().strftime("%d_%m_%Y---%H_%M_%S")))
+
+@dataclass
+class Config:
     # Folder name of the run
-    run_folder: str = create_folder_name(ARGS.folder_name) if ARGS.folder_name is not None \
-                      else create_folder_name(str(datetime.datetime.now().strftime("%d_%m_%Y---%H_%M_%S")))
+    run_folder: str = ''
     # Path to CelebA images
     path_to_celeba_images: str = '../../data/celeba/images'
     # Path to CelebA bounding-boxes
@@ -153,6 +161,9 @@ class Config(NamedTuple):
     sub_images_max_size: int = 64
     # Stride of sub images
     sub_images_stride: float = 0.2
+
+    def __post_init__(self):
+        self.run_folder = create_run_folder()
 
 
 def init_trainining_results():
