@@ -17,6 +17,7 @@ class Evaluator:
         device: str,
         nr_windows: int,
         stride: float,
+        model_name: str,
         path_to_model: Optional[str] = None,
         model: Optional[Db_vae] = None,
         **kwargs
@@ -24,6 +25,7 @@ class Evaluator:
         self.z_dim = z_dim
         self.device = device
         self.batch_size = batch_size
+        self.model_name = model_name
         self.nr_windows = nr_windows
         self.stride = stride
 
@@ -46,7 +48,7 @@ class Evaluator:
         )
         raise Exception
 
-    def eval(self, filter_exclude_skin_color: List[str] = [], filter_exclude_gender: List[str] = [], 
+    def eval(self, filter_exclude_skin_color: List[str] = [], filter_exclude_gender: List[str] = [],
                    dataset_type: str= ""):
         self.model.eval()
 
@@ -110,9 +112,9 @@ class Evaluator:
         incorrect_neg, count = self.eval()
         correct_neg: int = count - incorrect_neg
 
-        with open(f"results/{config.path_to_model}/{config.eval_name}", 'a+') as write_file:
+        with open(f"results/{self.path_to_model}/{eval_name}", 'a+') as write_file:
             write_file.write(f"name,dark male,dark female,light male,light female,var,precision,recall,accuracy\n")
-            write_file.write(f"{config.path_to_model}_{config.model_name}")
+            write_file.write(f"{self.path_to_model}_{self.model_name}")
             write_file.write(f",{recalls[0]:.3f},{recalls[1]:.3f},{recalls[2]:.3f},{recalls[3]:.3f},{(torch.Tensor(recalls)).var().item():.3f},{correct_pos/(correct_pos + neg_count)*100:.3f},{avg_recall:.3f},{(correct_pos + correct_neg)/(2*1270)*100:.3f}\n")
 
         logger.success("Finished evaluation!")
