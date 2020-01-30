@@ -77,3 +77,6 @@ def classify_random_image(
      classify_image(path_to_img, path_to_model=path_to_model, z_dim=z_dim, device=device, batch_size=batch_size)
 
 # classify_random_image(path_to_model='dante', z_dim=200, device=config.device)
+
+if __name__ == "__main__":
+     

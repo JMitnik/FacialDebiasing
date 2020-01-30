@@ -102,18 +102,28 @@ class Evaluator:
 
         # Calculate the average recall
         avg_recall = correct_pos/total_count*100
+        variance = (torch.tensor(recalls)).var().item()
+
+        incorrect_neg, neg_count = self.eval()
+        correct_neg: int = neg_count - incorrect_neg
+
+        precision = correct_pos/(correct_pos + neg_count)*100
+        accuracy = (correct_pos + correct_neg)/(2*1270)*100
 
         # Logger info
-        logger.info(f"Recall => all:{avg_recall:.3f}, dark male: {recalls[0]:.3f}, dark female: {recalls[1]:.3f}, white male: {recalls[2]:.3f}, white female: {recalls[3]:.3f}")
-        logger.info(f"Variance => {(torch.tensor(recalls)).var().item():.3f}")
+        logger.info(f"Recall => all: {avg_recall:.3f}") 
+        logger.info(f"Recall => dark male: {recalls[0]:.3f}")
+        logger.info(f"Recall => dark female: {recalls[1]:.3f}")
+        logger.info(f"Recall => white male: {recalls[2]:.3f}") 
+        logger.info(f"Recall => white female: {recalls[3]:.3f}")
+        logger.info(f"Variance => {variance:.3f}")
+        logger.info(f"Precision => {precision:.3f}")
+        logger.info(f"Accuracy => {accuracy:.3f}")
 
-        incorrect_neg, count = self.eval()
-        correct_neg: int = count - incorrect_neg
-
-        with open(f"results/{config.path_to_model}/{config.eval_name}", 'a+') as write_file:
+        with open(f"results/{self.path_to_model}/{self.eval_name}", 'a+') as write_file:
             write_file.write(f"name,dark male,dark female,light male,light female,var,precision,recall,accuracy\n")
-            write_file.write(f"{config.path_to_model}_{config.model_name}")
-            write_file.write(f",{recalls[0]:.3f},{recalls[1]:.3f},{recalls[2]:.3f},{recalls[3]:.3f},{(torch.Tensor(recalls)).var().item():.3f},{correct_pos/(correct_pos + neg_count)*100:.3f},{avg_recall:.3f},{(correct_pos + correct_neg)/(2*1270)*100:.3f}\n")
+            write_file.write(f"{self.path_to_model}_{self.model_name}")
+            write_file.write(f",{recalls[0]:.3f},{recalls[1]:.3f},{recalls[2]:.3f},{recalls[3]:.3f},{variance:.3f},{precision:.3f},{avg_recall:.3f},{accuracy:.3f}\n")
 
         logger.success("Finished evaluation!")
 

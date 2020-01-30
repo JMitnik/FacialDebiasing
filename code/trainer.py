@@ -79,18 +79,15 @@ class Trainer:
             # Training
             train_loss, train_acc = self._train_epoch()
             epoch_train_t = datetime.now() - epoch_start_t
-            logger.info(f"epoch {epoch+1}/{epochs}"
-                  f"runtime={epoch_train_t}::Training done"
-                  f"\t=> train_loss={train_loss:.2f}, train_acc={train_acc:.2f}"
-            )
+            logger.info(f"epoch {epoch+1}/{epochs}::Training done")
+            logger.info(f"epoch {epoch+1}/{epochs} => train_loss={train_loss:.2f}, train_acc={train_acc:.2f}")
 
             # Validation
             logger.info("Starting validation")
             val_loss, val_acc = self._eval_epoch(epoch)
             epoch_val_t = datetime.now() - epoch_start_t
-            logger.info(f"epoch {epoch+1}/{epochs}"
-                  f"runtime={epoch_val_t}::Validation done"
-                  f"\t=> val_loss={val_loss:.2f}, val_acc={val_acc:.2f}")
+            logger.info(f"epoch {epoch+1}/{epochs}::Validation done")
+            logger.info(f"epoch {epoch+1}/{epochs} => val_loss={val_loss:.2f}, val_acc={val_acc:.2f}")
 
             # Print reconstruction
             valid_data = concat_datasets(self.valid_loaders.faces.dataset, self.valid_loaders.nonfaces.dataset, proportion_a=0.5)
