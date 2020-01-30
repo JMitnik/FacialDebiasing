@@ -166,7 +166,7 @@ class Config:
         self.run_folder = create_run_folder()
 
 
-def init_trainining_results():
+def init_trainining_results(config: Config):
     # Write run-folder name
     if not os.path.exists("results"):
         os.makedirs("results")
@@ -199,4 +199,4 @@ def init_trainining_results():
         wf.write(f"max_images: {config.max_images}\n")
         wf.write(f"use_h5: {config.use_h5}\n")
 
-config = Config()
+default_config = Config()

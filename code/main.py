@@ -14,7 +14,7 @@ from datasets.data_utils import slide_windows_over_img
 from dataclasses import asdict
 
 def make_trainer(config: Config):
-     return Trainer(**asdict(config))
+     return Trainer(**asdict(config), config=config)
 
 # trainer = make_trainer(config)
 # trainer.train(10)
@@ -24,6 +24,7 @@ def make_evaluator(config: Config):
      return Evaluator(
           nr_windows=config.sub_images_nr_windows,
           path_to_eval_dataset=config.path_to_eval_face_images,
+          config=config
           **config._asdict()
      )
 

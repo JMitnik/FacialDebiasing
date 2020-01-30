@@ -6,7 +6,6 @@ import torch
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, WeightedRandomSampler, BatchSampler, SequentialSampler
 from torch.utils.data.dataset import Subset
 from torch.utils.data.sampler import RandomSampler
-from setup import config
 import h5py
 import numpy as np
 from typing import Optional, List, NamedTuple, Union
@@ -17,10 +16,10 @@ from datasets.celeb_a import CelebDataset
 from datasets.imagenet import ImagenetDataset
 from datasets.ppb import PPBDataset
 
-def split_dataset(dataset, train_size: float, max_images: Optional[int] = None):
+def split_dataset(dataset, train_size: float, random_seed, max_images: Optional[int] = None):
     # Shuffle indices of the dataset
     idxs: np.array = np.arange(len(dataset))
-    np.random.seed(config.random_seed)
+    np.random.seed(random_seed)
     np.random.shuffle(idxs)
 
     # Sample sub-selection
@@ -59,11 +58,11 @@ def make_h5_datasets(path_to_h5_train: str, **kwargs):
         logger.error(
             f"Unable to find h5 file for training file at {path_to_h5_train}",
             next_step="Will stop training / evaluation",
-            tip="Double check your path_to_h5_train in the config, and check if you downloaded the appropriate .h5 file"
+            tip="Double check your path_to_h5_train in your config, and check if you downloaded the appropriate .h5 file"
         )
         raise Exception
 
-    with h5py.File(config.path_to_h5_train, mode='r') as h5_file:
+    with h5py.File(path_to_h5_train, mode='r') as h5_file:
         labels = h5_file['labels'][()].flatten()
         files = h5_file['images']
 
@@ -82,12 +81,16 @@ def make_h5_datasets(path_to_h5_train: str, **kwargs):
 def make_train_and_valid_loaders(
     batch_size: int,
     max_images: int,
+    path_to_imagenet_images: str,
+    path_to_celeba_images: str,
+    num_workers: int,
     shuffle: bool = True,
     train_size: float = 0.8,
     proportion_faces: float = 0.5,
     enable_debias: bool = True,
     sample_bias_with_replacement: bool = True,
     use_h5: bool = True,
+    random_seed = '',
     **kwargs
 ):
     nr_images: Optional[int] = max_images if max_images >= 0 else None
@@ -96,16 +99,16 @@ def make_train_and_valid_loaders(
     if use_h5:
         celeb_dataset, imagenet_dataset = make_h5_datasets(**kwargs)
     else:
-        imagenet_dataset = ImagenetDataset(path_to_images=config.path_to_imagenet_images, **kwargs)
-        celeb_dataset = CelebDataset(path_to_images=config.path_to_celeba_images, path_to_bbox=config.path_to_celeba_bbox_file, **kwargs)
+        imagenet_dataset = ImagenetDataset(path_to_images=path_to_imagenet_images, **kwargs)
+        celeb_dataset = CelebDataset(path_to_images=path_to_celeba_images, **kwargs)
 
     # Split both datasets into training and validation
-    celeb_train, celeb_valid = split_dataset(celeb_dataset, train_size, nr_images)
-    imagenet_train, imagenet_valid = split_dataset(imagenet_dataset, train_size, nr_images)
+    celeb_train, celeb_valid = split_dataset(celeb_dataset, train_size, random_seed, nr_images)
+    imagenet_train, imagenet_valid = split_dataset(imagenet_dataset, train_size, random_seed, nr_images)
 
     # Nonfaces loaders
-    train_nonfaces_loader: DataLoader = DataLoader(imagenet_train, batch_size=int(batch_size / 2), shuffle=shuffle, num_workers=config.num_workers)
-    valid_nonfaces_loader: DataLoader = DataLoader(imagenet_valid, batch_size=int(batch_size / 2), shuffle=False, num_workers=config.num_workers)
+    train_nonfaces_loader: DataLoader = DataLoader(imagenet_train, batch_size=int(batch_size / 2), shuffle=shuffle, num_workers=num_workers)
+    valid_nonfaces_loader: DataLoader = DataLoader(imagenet_valid, batch_size=int(batch_size / 2), shuffle=False, num_workers=num_workers)
 
     # Init some weights
     init_weights = torch.rand(len(celeb_train)).tolist()
@@ -117,8 +120,8 @@ def make_train_and_valid_loaders(
     train_sampler = weights_sampler_train if enable_debias else random_train_sampler
 
     # Define the face loaders
-    train_faces_loader: DataLoader = DataLoader(celeb_train, sampler=train_sampler, batch_size=int(batch_size / 2), num_workers=config.num_workers)
-    valid_faces_loader: DataLoader = DataLoader(celeb_valid, batch_size=int(batch_size / 2), shuffle=shuffle, num_workers=config.num_workers)
+    train_faces_loader: DataLoader = DataLoader(celeb_train, sampler=train_sampler, batch_size=int(batch_size / 2), num_workers=num_workers)
+    valid_faces_loader: DataLoader = DataLoader(celeb_valid, batch_size=int(batch_size / 2), shuffle=shuffle, num_workers=num_workers)
 
     train_loaders: DataLoaderTuple = DataLoaderTuple(train_faces_loader, train_nonfaces_loader)
     valid_loaders: DataLoaderTuple = DataLoaderTuple(valid_faces_loader, valid_nonfaces_loader)
@@ -131,6 +134,10 @@ class EvalDatasetType(Enum):
     H5_IMAGENET_ONLY = 'h5_imagenet'
 
 def make_eval_loader(
+    num_workers: int,
+    path_to_eval_face_images: str,
+    path_to_eval_metadata: str,
+    path_to_eval_nonface_images: str,
     filter_exclude_gender: List[str] = [],
     filter_exclude_country: List[str] = [],
     filter_exclude_skin_color: List[str] = [],
@@ -143,8 +150,8 @@ def make_eval_loader(
         logger.info('Evaluating on PPB')
 
         dataset = PPBDataset(
-            path_to_images=config.path_to_eval_face_images,
-            path_to_metadata=config.path_to_eval_metadata,
+            path_to_images=path_to_eval_face_images,
+            path_to_metadata=path_to_eval_metadata,
             filter_excl_country=filter_exclude_country,
             filter_excl_gender=filter_exclude_gender,
             filter_excl_skin_color=filter_exclude_skin_color,
@@ -155,7 +162,7 @@ def make_eval_loader(
         logger.info('Evaluating on Imagenet')
 
         dataset = ImagenetDataset(
-            path_to_images=config.path_to_eval_nonface_images,
+            path_to_images=path_to_eval_nonface_images,
             get_sub_images=True,
             **kwargs
         )
@@ -177,7 +184,7 @@ def make_eval_loader(
         dataset = subsample_dataset(dataset, nr_images, random=True)
 
     # Concat and wrap with loader
-    data_loader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=config.num_workers)
+    data_loader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=num_workers)
 
     return data_loader
 

@@ -193,7 +193,7 @@ def main():
         print(f"epoch {epoch+1}/{config.epochs}, runtime={runtime}::Evaluation done => val_loss={val_loss:.2f}, val_acc={val_acc:.2f}")
 
         valid_data = concat_datasets(valid_loaders.faces.dataset, valid_loaders.nonfaces.dataset, proportion_a=0.5)
-        utils.print_reconstruction(model, valid_data, epoch)
+        utils.print_reconstruction(model, valid_data, epoch, self.device)
 
         with open(f"results/{config.run_folder}/training_results.csv", "a") as write_file:
             write_file.write(f"{epoch}, {train_loss}, {val_loss}, {train_acc}, {val_acc}\n")

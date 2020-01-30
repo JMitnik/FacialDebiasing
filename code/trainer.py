@@ -32,9 +32,10 @@ class Trainer:
         run_folder: Optional[str] = None,
         custom_encoding_layers: Optional[nn.Sequential] = None,
         custom_decoding_layers: Optional[nn.Sequential] = None,
+        config: Optional = None
         **kwargs
     ):
-        init_trainining_results()
+        init_trainining_results(config)
         self.epochs = epochs
         self.z_dim = z_dim
         self.batch_size = batch_size
@@ -42,6 +43,8 @@ class Trainer:
         self.device = device
         self.eval_freq = eval_freq
         self.run_folder = run_folder
+
+        self.config = config
 
         self.model: Db_vae = Db_vae(
             z_dim=z_dim,
@@ -91,12 +94,44 @@ class Trainer:
 
             # Print reconstruction
             valid_data = concat_datasets(self.valid_loaders.faces.dataset, self.valid_loaders.nonfaces.dataset, proportion_a=0.5)
-            utils.print_reconstruction(self.model, valid_data, epoch)
+            self.print_reconstruction(self.model, valid_data, epoch, self.device)
 
             # Save model and scores
             self._save_epoch(epoch, train_loss, val_loss, train_acc, val_acc)
 
         logger.success(f"Finished training on {epochs} epochs.")
+
+        
+    def print_reconstruction(self, model, data, epoch, device, n_rows=4, save=True):
+        # TODO: Add annotation
+        model.eval()
+        n_samples = n_rows**2
+
+        images = sample_dataset(data, n_samples).to(device)
+
+        recon_images = model.recon_images(images)
+
+        fig=plt.figure(figsize=(16, 8))
+
+        fig.add_subplot(1, 2, 1)
+        grid = make_grid(images.reshape(n_samples,3,64,64), n_rows)
+        plt.imshow(grid.permute(1,2,0).cpu())
+
+        remove_frame(plt)
+
+        fig.add_subplot(1, 2, 2)
+        grid = make_grid(recon_images.reshape(n_samples,3,64,64), n_rows)
+        plt.imshow(grid.permute(1,2,0).cpu())
+
+        remove_frame(plt)
+
+        if save:
+            fig.savefig('results/{}/reconstructions/epoch={}'.format(self.config.run_folder, epoch), bbox_inches='tight')
+
+            plt.close()
+        else:
+            return fig
+
 
     def _save_epoch(self, epoch: int, train_loss: float, val_loss: float, train_acc: float, val_acc: float):
         """Writes training and validation scores to a csv, and stores a model to disk."""
@@ -118,6 +153,31 @@ class Trainer:
         torch.save(self.model.state_dict(), path_to_model)
 
         logger.save("Stored model and results")
+
+    def visualize_bias(probs, data_loader, all_labels, all_index, epoch, n_rows=3):
+        # TODO: Add annotation
+        n_samples = n_rows ** 2
+
+        highest_probs = probs.argsort(descending=True)[:n_samples]
+        lowest_probs = probs.argsort()[:n_samples]
+
+        highest_imgs = sample_idxs_from_loader(all_index[highest_probs], data_loader, 1)
+        worst_imgs = sample_idxs_from_loader(all_index[lowest_probs], data_loader, 1)
+
+        img_list = (highest_imgs, worst_imgs)
+        titles = ("Highest", "Lowest")
+        fig = plt.figure(figsize=(16, 16))
+
+        for i in range(2):
+            ax = fig.add_subplot(1, 2, i+1)
+            grid = make_grid(img_list[i].reshape(n_samples,3,64,64), n_rows)
+            plt.imshow(grid.permute(1,2,0).cpu())
+            ax.set_title(titles[i], fontdict={"fontsize":30})
+
+            remove_frame(plt)
+
+        fig.savefig('results/{}/bias_probs/epoch={}'.format(self.config.run_folder, epoch), bbox_inches='tight')
+        plt.close()
 
 
     def _eval_epoch(self, epoch):
@@ -155,8 +215,8 @@ class Trainer:
 
                 count = i
 
-        best_faces, worst_faces, best_other, worst_other = utils.get_best_and_worst_predictions(all_labels, all_preds)
-        utils.visualize_best_and_worst(self.valid_loaders, all_labels, all_idxs, epoch, best_faces, worst_faces, best_other, worst_other)
+        best_faces, worst_faces, best_other, worst_other = utils.get_best_and_worst_predictions(all_labels, all_preds, self.device)
+        self.visualize_best_and_worst(self.valid_loaders, all_labels, all_idxs, epoch, best_faces, worst_faces, best_other, worst_other)
 
         return avg_loss/(count+1), avg_acc/(count+1)
 
@@ -269,11 +329,40 @@ class Trainer:
 
     def reconstruction_samples(self, n_rows=4):
         valid_data = concat_datasets(self.valid_loaders.faces.dataset, self.valid_loaders.nonfaces.dataset, proportion_a=0.5)
-        fig = utils.print_reconstruction(self.model, valid_data, 0, save=False)
+        fig = self.print_reconstruction(self.model, valid_data, 0, self.device, save=False)
 
         fig.show()
 
         return
+
+    
+    def visualize_best_and_worst(data_loaders, all_labels, all_indices, epoch, best_faces, worst_faces, best_other, worst_other, n_rows=4, save=True):
+        # TODO: Add annotation
+        n_samples = n_rows**2
+
+        fig=plt.figure(figsize=(16, 16))
+
+        sub_titles = ["Best faces", "Worst faces", "Best non-faces", "Worst non-faces"]
+        for i, indices in enumerate((best_faces, worst_faces, best_other, worst_other)):
+            labels, indices = all_labels[indices], all_indices[indices]
+
+            images = sample_idxs_from_loaders(indices, data_loaders, labels[0])
+
+            ax = fig.add_subplot(2, 2, i+1)
+            grid = make_grid(images.reshape(n_samples,3,64,64), n_rows)
+            plt.imshow(grid.permute(1,2,0).cpu())
+            ax.set_title(sub_titles[i], fontdict={"fontsize":30})
+
+            remove_frame(plt)
+
+        if save:
+            fig.savefig('results/{}/best_and_worst/epoch:{}'.format(self.config.run_folder, epoch), bbox_inches='tight')
+
+            plt.close()
+
+        else:
+            return fig
+
 
     def best_and_worst(self, n_rows=4):
         """Calculates the validation error of the model."""
@@ -310,7 +399,7 @@ class Trainer:
 
                 count = i
 
-        best_faces, worst_faces, best_other, worst_other = utils.get_best_and_worst_predictions(all_labels, all_preds)
+        best_faces, worst_faces, best_other, worst_other = utils.get_best_and_worst_predictions(all_labels, all_preds, self.device)
         fig = utils.visualize_best_and_worst(self.valid_loaders, all_labels, all_idxs, 0, best_faces, worst_faces, best_other, worst_other, save=False)
 
         fig.show()

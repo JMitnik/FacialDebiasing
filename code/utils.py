@@ -12,20 +12,19 @@ import gc
 from collections import Counter
 from PIL import Image
 
-from setup import config
 from dataset import sample_dataset, sample_idxs_from_loader, sample_idxs_from_loaders
 
 def calculate_accuracy(labels, pred):
     """Calculates accuracy given labels and predictions."""
     return float(((pred > 0) == (labels > 0)).sum()) / labels.size()[0]
 
-def get_best_and_worst_predictions(labels, pred):
+def get_best_and_worst_predictions(labels, pred, device):
     """Returns indices of the best and worst predicted faces."""
     n_rows = 4
     n_samples = n_rows**2
 
     logger.info(f"Face percentage: {float(labels.sum().item())/len(labels)}")
-    indices = torch.tensor([i for i in range(len(labels))]).long().to(config.device)
+    indices = torch.tensor([i for i in range(len(labels))]).long().to(device)
 
     faceslice = labels == 1
     faces,       other       = pred[faceslice],    pred[~faceslice]
@@ -53,37 +52,6 @@ def remove_frame(plt):
     for tick in frame.axes.get_yticklines():
         tick.set_visible(False)
 
-def print_reconstruction(model, data, epoch, n_rows=4, save=True):
-    # TODO: Add annotation
-    model.eval()
-    n_samples = n_rows**2
-
-    images = sample_dataset(data, n_samples).to(config.device)
-
-    recon_images = model.recon_images(images)
-
-    fig=plt.figure(figsize=(16, 8))
-
-    fig.add_subplot(1, 2, 1)
-    grid = make_grid(images.reshape(n_samples,3,64,64), n_rows)
-    plt.imshow(grid.permute(1,2,0).cpu())
-
-    remove_frame(plt)
-
-    fig.add_subplot(1, 2, 2)
-    grid = make_grid(recon_images.reshape(n_samples,3,64,64), n_rows)
-    plt.imshow(grid.permute(1,2,0).cpu())
-
-    remove_frame(plt)
-
-
-    if save:
-        fig.savefig('results/{}/reconstructions/epoch={}'.format(config.run_folder, epoch), bbox_inches='tight')
-
-        plt.close()
-    else:
-        return fig
-
 def concat_batches(batch_a: DatasetOutput, batch_b: DatasetOutput):
     """Concatenates two batches of data of shape image x label x idx."""
     images: torch.Tensor = torch.cat((batch_a.image, batch_b.image), 0)
@@ -92,69 +60,6 @@ def concat_batches(batch_a: DatasetOutput, batch_b: DatasetOutput):
 
     return images, labels, idxs
 
-def visualize_best_and_worst(data_loaders, all_labels, all_indices, epoch, best_faces, worst_faces, best_other, worst_other, n_rows=4, save=True):
-    # TODO: Add annotation
-    n_samples = n_rows**2
-
-    fig=plt.figure(figsize=(16, 16))
-
-    sub_titles = ["Best faces", "Worst faces", "Best non-faces", "Worst non-faces"]
-    for i, indices in enumerate((best_faces, worst_faces, best_other, worst_other)):
-        labels, indices = all_labels[indices], all_indices[indices]
-
-        images = sample_idxs_from_loaders(indices, data_loaders, labels[0])
-
-        ax = fig.add_subplot(2, 2, i+1)
-        grid = make_grid(images.reshape(n_samples,3,64,64), n_rows)
-        plt.imshow(grid.permute(1,2,0).cpu())
-        ax.set_title(sub_titles[i], fontdict={"fontsize":30})
-
-        remove_frame(plt)
-
-    if save:
-        fig.savefig('results/{}/best_and_worst/epoch:{}'.format(config.run_folder,epoch), bbox_inches='tight')
-
-        plt.close()
-
-    else:
-        return fig
-
-
-def visualize_bias(probs, data_loader, all_labels, all_index, epoch, n_rows=3):
-    # TODO: Add annotation
-    n_samples = n_rows ** 2
-
-    highest_probs = probs.argsort(descending=True)[:n_samples]
-    lowest_probs = probs.argsort()[:n_samples]
-
-    highest_imgs = sample_idxs_from_loader(all_index[highest_probs], data_loader, 1)
-    worst_imgs = sample_idxs_from_loader(all_index[lowest_probs], data_loader, 1)
-
-    img_list = (highest_imgs, worst_imgs)
-    titles = ("Highest", "Lowest")
-    fig = plt.figure(figsize=(16, 16))
-
-    for i in range(2):
-        ax = fig.add_subplot(1, 2, i+1)
-        grid = make_grid(img_list[i].reshape(n_samples,3,64,64), n_rows)
-        plt.imshow(grid.permute(1,2,0).cpu())
-        ax.set_title(titles[i], fontdict={"fontsize":30})
-
-        remove_frame(plt)
-
-    fig.savefig('results/{}/bias_probs/epoch={}'.format(config.run_folder, epoch), bbox_inches='tight')
-    plt.close()
-
-
-def write_hist(hist, epoch: int = 0):
-    """Writes histogram scores to file (if configuration debug mode is enabled)."""
-    if config.debug_mode:
-        print("Writing histogram to file")
-
-        with open(f"results/{config.run_folder}/debug/hist.txt", "a+") as write_file:
-            write_file.write(f"EPOCH: {epoch}\n")
-            write_file.write(f"{str(hist)}\n")
-            write_file.write(f"\n\n\n")
 
 def read_image(path_to_image):
     img: Image = Image.open(path_to_image)
@@ -170,7 +75,7 @@ def read_flags(path_to_model):
     with open(path_to_flags, 'r') as f:
         data = f.readlines()
 
-def find_face_in_subimages(model, sub_images: torch.Tensor):
+def find_face_in_subimages(model, sub_images: torch.Tensor, device: str):
     model.eval()
 
     for images in sub_images:
@@ -180,7 +85,7 @@ def find_face_in_subimages(model, sub_images: torch.Tensor):
         # If one image
         if len(images.shape) == 3:
             images = images.view(1, 3, 64, 64)
-        images = images.to(config.device)
+        images = images.to(device)
         pred = model.forward_eval(images)
 
         # If face
@@ -195,7 +100,6 @@ def default_transforms():
         transforms.Resize((64, 64)),
         transforms.ToTensor()
     ])
-
 
 def visualize_tensor(img_tensor: torch.Tensor):
     pil_transformer = transforms.ToPILImage()

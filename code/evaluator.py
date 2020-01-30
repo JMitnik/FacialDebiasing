@@ -20,6 +20,7 @@ class Evaluator:
         model_name: str,
         path_to_model: Optional[str] = None,
         model: Optional[Db_vae] = None,
+        config: Optional = None,
         **kwargs
     ):
         self.z_dim = z_dim

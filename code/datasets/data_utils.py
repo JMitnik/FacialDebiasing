@@ -69,13 +69,6 @@ def slide_windows_over_img(
         sub_images = slide_single_window_over_img(img, win_size, stride)
         result.append(sub_images)
 
-    # Uncomment to store the images
-    # if config.debug_mode:
-    #     save_images(torch.cat(result))
-
-    if config.save_sub_images:
-        save_images(torch.cat(result))
-
     return torch.cat(result, dim=0)
 
 def apply_window_resize(img: torch.Tensor, win_size: int):
@@ -83,7 +76,7 @@ def apply_window_resize(img: torch.Tensor, win_size: int):
 
     img_transforms = transforms.Compose([
         pil_transform,
-        transforms.Resize((config.image_size, config.image_size)),
+        transforms.Resize((64, 64)),
         transforms.ToTensor()
     ])
 
@@ -118,10 +111,10 @@ def visualize_tensor(img_tensor: torch.Tensor):
     pil_transformer = transforms.ToPILImage()
     pil_transformer(img_tensor).show()
 
-def save_images(torch_tensors: torch.Tensor):
+def save_images(torch_tensors: torch.Tensor, path_to_folder: str):
     rand_filenames = str(uuid.uuid4())[:8]
     pil_transformer = transforms.ToPILImage()
-    image_folder = f"results/{config.run_folder}/debug/images/{rand_filenames}/"
+    image_folder = f"results/{path_to_folder}/debug/images/{rand_filenames}/"
     os.makedirs(image_folder, exist_ok=True)
 
     for i, img in enumerate(torch_tensors):
