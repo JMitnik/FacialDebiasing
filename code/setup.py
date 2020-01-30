@@ -97,7 +97,7 @@ class Config:
     # Path to ImageNet images
     path_to_imagenet_images: str = '../../data/imagenet'
     # Path to evaluation images (Faces)
-    path_to_eval_face_images: str = '../../data/ppb/imgs'
+    path_to_eval_face_images: str = 'data/ppb/PPB-2017/imgs'
     # Path to evaluation metadata
     path_to_eval_metadata: str = '../../data/ppb/PPB-2017-metadata.csv'
     # Path to evaluation images (Nonfaces such as Imagenet)
