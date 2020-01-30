@@ -77,7 +77,6 @@ def create_folder_name(foldername):
             foldername = f'{foldername}{suffix}'
             return foldername
         else:
-            print(f'count: {count}')
             count += 1
             suffix = f'_{count}'
 
@@ -162,8 +161,10 @@ class Config:
     # Stride of sub images
     sub_images_stride: float = 0.2
 
-    def __post_init__(self):
+    def __post_init__(self, printing=False):
         self.run_folder = create_run_folder(self.run_folder)
+        if printing:
+            logger.save(f"Saving new run files to {self.run_folder}")
 
 
 def init_trainining_results(config: Config):
@@ -171,6 +172,7 @@ def init_trainining_results(config: Config):
     if not os.path.exists("results"):
         os.makedirs("results")
 
+    config.__post_init__(printing=True)
     os.makedirs("results/"+ config.run_folder + '/best_and_worst')
     os.makedirs("results/"+ config.run_folder + '/bias_probs')
     os.makedirs("results/"+ config.run_folder + '/reconstructions')

@@ -365,7 +365,7 @@ class Trainer:
         plt.imshow(grid.permute(1,2,0).cpu())
 
         utils.remove_frame(plt)
-        plt.show()
+        plt.show(warn=False)
 
         return
 
@@ -373,7 +373,7 @@ class Trainer:
         valid_data = concat_datasets(self.valid_loaders.faces.dataset, self.valid_loaders.nonfaces.dataset, proportion_a=0.5)
         fig = self.print_reconstruction(self.model, valid_data, 0, self.device, save=False)
 
-        fig.show()
+        fig.show(warn=False)
 
         return
 
@@ -443,6 +443,6 @@ class Trainer:
         best_faces, worst_faces, best_other, worst_other = utils.get_best_and_worst_predictions(all_labels, all_preds, self.device)
         fig = self.visualize_best_and_worst(self.valid_loaders, all_labels, all_idxs, 0, best_faces, worst_faces, best_other, worst_other, save=False)
 
-        fig.show()
+        fig.show(warn=False)
 
         return

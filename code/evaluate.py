@@ -82,7 +82,7 @@ def interpolate_images(model, amount: int):
     plt.imshow(grid.permute(1,2,0).cpu())
     utils.remove_frame(plt)
 
-    plt.show()
+    plt.show(warn=False)
 
 
 
