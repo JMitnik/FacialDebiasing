@@ -59,6 +59,11 @@ As a user, you can play around with the notebook via the *Config* parameters. In
 
 Main.py can be run with a majority of the flags (see the Config parameters).
 
+Some of the most important ones:
+* run_mode: Running 'training' / 'evaluation' / 'both'
+* debias_type: Which method to use for debiassing 'max' / 'max5' / 'gaussian'
+* path_to_model: Debias typ
+
 ## Config parameters
 
 | Parameters               | Type          | Default value                      | Description                                        | Flag (--) |
@@ -66,7 +71,7 @@ Main.py can be run with a majority of the flags (see the Config parameters).
 | path_to_celeba_images    | str           | 'data/celeba/images'               | Path to separate CelebA images used for training   |           |
 | path_to_celeba_bbox_file | str           | 'data/celeba/list_bbox_celeba.txt' | Path to separate CelebA bbox used for training     |           |
 | path_to_imagenet_images  | str           | 'data/imagenet'                    | Path to separate Imagenet folder used for training |           |
-| path_to_eval_face_images | str           | 'data/ppb/imgs'                    | Path to PPB folder used for evaluation             |           |
+| path_to_eval_face_images | str           | 'data/ppb/PPB-2017/imgs'                    | Path to PPB folder used for evaluation             |           |
 | path_to_eval_metadata    | str           | 'data/ppb/PPB-2017-metadata.csv'   | Path to PPB evaluation                             |           |
 | path_to_model            | Optional[str] |                                    | Path to stored model                               | [x]       |
 | path_to_h5_train         | str           | 'data/h5_train/train_face.h5'      | Path to h5                                         |           |
