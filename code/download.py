@@ -11,18 +11,18 @@ def ensure_path(path):
 
 
 # Fetch train data
-path_to_train_data = 'data_test/train_face.h5'
+path_to_train_data = 'data/h5_train/train_face.h5'
 train_url = 'https://www.dropbox.com/s/l5iqduhe0gwxumq/train_face.h5?dl=1'
 
 if not os.path.exists(path_to_train_data):
     print(f"Going to fetch training data, will place it in {path_to_train_data}.")
-    urllib.request.urlretrieve(train_url, ensure_path(path_to_temp_data))
+    urllib.request.urlretrieve(train_url, ensure_path(path_to_train_data))
 else:
     print("Train data already exists.")
 
 
 # Fetch train data
-path_to_test_data = 'data_test/pbb/PBB.tar'
+path_to_test_data = 'data/pbb/PBB.tar'
 test_url = 'https://www.dropbox.com/s/l0lp6qxeplumouf/PPB.tar?dl=1'
 
 if not os.path.exists(path_to_test_data):
