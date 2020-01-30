@@ -1,40 +1,50 @@
 import torch
 from torch.utils.data import Dataset as TorchDataset
+from .generic import GenericImageDataset
 import numpy as np
+from logger import logger
 import pandas as pd
 import os
 from PIL import Image
 from typing import Callable, Optional, List, Union
-from .generic import CountryEnum, SkinColorEnum, default_transform, DataLabel, GenderEnum, slide_windows_over_img
-from setup import config
+from .data_utils import CountryEnum, DatasetOutput, SkinColorEnum, default_transform, DataLabel, GenderEnum, slide_windows_over_img
 
-class PPBDataset(TorchDataset):
+class PPBDataset(GenericImageDataset):
     def __init__(
         self,
-        path_to_images: str,
         path_to_metadata: str,
-        filter_excl_gender: List[Union[GenderEnum, str]] = [],
-        filter_excl_country: List[Union[CountryEnum, str]] = [],
-        filter_excl_skin_color: List[Union[SkinColorEnum, str]] = [],
-        nr_windows: int = 10,
-        batch_size: int = -1,
-        transform: Callable = default_transform,
-        get_sub_images: bool = False,
-        stride: float = 0.2
+        filter_excl_gender: List[str] = [],
+        filter_excl_country: List[str] = [],
+        filter_excl_skin_color: List[str] = [],
+        **kwargs
     ):
-        self.path_to_images: str = path_to_images
+        super().__init__(**kwargs)
+
+        # Path to metadata
         self.path_to_metadata: str = path_to_metadata
-        self.filter_excl_gender: List[Union[GenderEnum, str]] = filter_excl_gender
-        self.filter_excl_country: List[Union[CountryEnum, str]] = filter_excl_country
-        self.filter_excl_skin_color: List[Union[SkinColorEnum, str]] = filter_excl_skin_color
-        self.transform = transform
 
-        self.nr_windows: int = nr_windows
-        self.batch_size: Optional[int] = None if batch_size < 0 else batch_size
-        self.stride = stride
+        # Filters
+        self.filter_excl_gender: List[str] = filter_excl_gender
+        self.filter_excl_country: List[str] = filter_excl_country
+        self.filter_excl_skin_color: List[str] = filter_excl_skin_color
 
-        self.get_sub_images = get_sub_images
-        self.df_metadata: pd.DataFrame = self._apply_filters_to_metadata(pd.read_csv(self.path_to_metadata))
+        # Store is a Dataframe based on the metadata
+        self.store: pd.DataFrame = self._apply_filters_to_metadata(pd.read_csv(self.path_to_metadata))
+
+        self.classification_label = 1
+
+    def init_store(self, path_to_metadata):
+        if not os.path.exists(path_to_metadata):
+            logger.error(f"Path to metadata (and probably PPB) does not exist at {path_to_metadata}!")
+            raise Exception
+
+        try:
+            store = self._apply_filters_to_metadata(pd.read_csv(path_to_metadata, delim_whitespace=True))
+            return store
+        except:
+            logger.error(
+                f"Unable to read the metadata file located at {path_to_metadata}"
+            )
 
 
     def _apply_filters_to_metadata(self, df: pd.DataFrame):
@@ -47,28 +57,20 @@ class PPBDataset(TorchDataset):
             result = result.query('gender not in @self.filter_excl_gender')
 
         if len(self.filter_excl_skin_color):
-            result = result.query('bi_fitz not in @self.filter_excl_skin_color')
+            try:
+                result = result.query('bi_fitz not in @self.filter_excl_skin_color')
+            except:
+                logger.error("bi_fitz can't be found in the metadata datadframe",
+                             next_step="The skin color wont be applied",
+                             tip="Rename the bi.fitz column to be bi_fitz in the metadata csv")
 
         return result
 
-    def __getitem__(self, idx: int, stride: float = 0.2):
-        img: Image = Image.open(os.path.join(self.path_to_images,
-                                self.df_metadata.iloc[idx].filename))
-
-        img = self.transform(img)
-
-        if self.get_sub_images:
-            imgs = slide_windows_over_img(img, min_win_size=config.eval_min_size,
-                                          max_win_size=config.eval_max_size,
-                                          nr_windows=self.nr_windows,
-                                          stride=self.stride)
-            imgs = torch.split(imgs, self.batch_size)
-        else:
-            imgs = img.unsqueeze(0)
-
-        label = DataLabel.POSITIVE.value
-
-        return (imgs, label, idx, img)
+    def read_image(self, idx: int):
+        return Image.open(os.path.join(
+            self.path_to_images,
+            self.store.iloc[idx].filename
+        ))
 
     def __len__(self):
-        return len(self.df_metadata)
+        return len(self.store)

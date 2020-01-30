@@ -2,7 +2,10 @@
 Here the structure of the network is made in pytorch
 """
 
+from typing import List, Union, Optional
 import torch
+import os
+from logger import logger
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
@@ -18,7 +21,7 @@ class Encoder(nn.Module):
               predicted value
     """
 
-    def __init__(self, z_dim=20):
+    def __init__(self, z_dim: int = 20, custom_layers: Optional[nn.Sequential] = None):
         super().__init__()
 
         self.z_dim = z_dim
@@ -48,7 +51,7 @@ class Encoder(nn.Module):
         )
 
 
-    def forward(self, input):
+    def forward(self, input: torch.Tensor):
         """
         Perform forward pass of encoder.
         """
@@ -78,7 +81,7 @@ class Decoder(nn.Module):
     4 6 13 29 61
     """
 
-    def __init__(self, z_dim=20):
+    def __init__(self, z_dim: int = 20, custom_layers: Optional[nn.Sequential] = None):
         super().__init__()
 
         self.layers = nn.Sequential(
@@ -103,7 +106,7 @@ class Decoder(nn.Module):
             nn.Sigmoid()
         )
 
-    def forward(self, input):
+    def forward(self, input: torch.Tensor):
         """
         Perform forward pass of encoder.
         """
@@ -116,14 +119,23 @@ class Decoder(nn.Module):
 
 class Db_vae(nn.Module):
 
-    def __init__(self, z_dim=20, hist_size=1000, alpha=0.01, num_bins=10, device="cpu"):
+    def __init__(
+        self,
+        z_dim: int = 20,
+        hist_size: int = 1000,
+        alpha: float = 0.01,
+        num_bins: int = 10,
+        device: str = "cpu",
+        custom_encoding_layers: Optional[nn.Sequential] = None,
+        custom_decoding_layers: Optional[nn.Sequential] = None
+    ):
         super().__init__()
 
         self.device = device
         self.z_dim = z_dim
 
-        self.encoder = Encoder(z_dim)
-        self.decoder = Decoder(z_dim)
+        self.encoder = Encoder(z_dim, custom_encoding_layers)
+        self.decoder = Decoder(z_dim, custom_decoding_layers)
 
         self.target_dist = torch.distributions.normal.Normal(0, 1)
 
@@ -143,8 +155,24 @@ class Db_vae(nn.Module):
 
         self.alpha = alpha
 
+    @staticmethod
+    def init(path_to_model: str, device: str, z_dim: int):
+        full_path_to_model = f"results/{path_to_model}/model.pt"
+        if not os.path.exists(full_path_to_model):
+            logger.error(
+                f"Can't find model at {full_path_to_model}",
+                next_step="Evaluation will stop",
+                tip="Double check your path to model"
+            )
+            raise Exception
 
-    def forward(self, images, labels):
+        model: Db_vae = Db_vae(z_dim=z_dim, device=device)
+        model.load_state_dict(torch.load(full_path_to_model, map_location=device))
+
+        return model
+
+
+    def forward(self, images: torch.Tensor, labels: torch.Tensor):
         """
         Given images, perform an encoding and decoding step and return the
         negative average elbo for the given batch.
@@ -152,7 +180,7 @@ class Db_vae(nn.Module):
         pred, mean, std = self.encoder(images)
 
         loss_class = F.binary_cross_entropy_with_logits(pred, labels.float(), reduction='none')
-        
+
         # We only want to calculate the loss towards actual faces
         faceslicer = labels == 1
         facemean = mean[faceslicer]
@@ -174,16 +202,16 @@ class Db_vae(nn.Module):
 
         loss_vae = self.c2 * loss_recon + self.c3 * loss_kl
         loss_total = self.c1 * loss_class
-        
+
         # Only add loss to positions of faces, rest is zero
         zeros = torch.zeros(faceslicer.shape[0]).to(self.device)
         zeros[faceslicer] = loss_vae
-        
+
         loss_total = loss_total + zeros
 
         return pred, loss_total
 
-    def forward_eval(self, images):
+    def forward_eval(self, images: torch.Tensor):
         """
         Given images, perform an encoding and decoding step and return the
         negative average elbo for the given batch.
@@ -194,15 +222,15 @@ class Db_vae(nn.Module):
         return pred
 
 
-    def interpolate(self, images, amount):
+    def interpolate(self, images: torch.Tensor, amount: int):
         with torch.no_grad():
             _, mean, std = self.encoder(images)
 
             mean_1, std_1 = mean[0,:], std[0,:]
             mean_2, std_2 = mean[1,:], std[1,:]
 
-            all_mean  = torch.Tensor([]).to(self.device)
-            all_std = torch.Tensor([]).to(self.device)
+            all_mean  = torch.tensor([]).to(self.device)
+            all_std = torch.tensor([]).to(self.device)
 
             diff_mean = mean_1 - mean_2
             diff_std = std_1 = std_2
@@ -223,7 +251,7 @@ class Db_vae(nn.Module):
 
         return recon_images
 
-    def build_means(self, input):
+    def build_means(self, input: torch.Tensor):
         _, mean, log_std = self.encoder(input)
 
         self.means = torch.cat((self.means, mean))
@@ -231,7 +259,7 @@ class Db_vae(nn.Module):
         return
 
 
-    def build_histo(self, input):
+    def build_histo(self, input: torch.Tensor):
         """
             Creates histos or samples Qs from it
             NOTE:
@@ -337,7 +365,7 @@ class Db_vae(nn.Module):
         self.std = torch.Tensor().to(self.device)
         return torch.tensor(results).to(self.device)
 
-    def recon_images(self, images):
+    def recon_images(self, images: torch.Tensor):
         with torch.no_grad():
             pred, mean, std = self.encoder(images)
 
@@ -356,5 +384,9 @@ class Db_vae(nn.Module):
         (from bernoulli) and the means for these bernoullis (as these are
         used to plot the data manifold).
         """
+        
+        with torch.no_grad():
+            z_samples = torch.randn(n_samples, self.z_dim).to(self.device)
+            sampled_images = self.decoder(z_samples)
 
-        return
+        return sampled_images

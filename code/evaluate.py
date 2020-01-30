@@ -16,35 +16,25 @@ import utils
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
 
-def eval_model(model, data_loader):
-    """
-    perform evaluation of a single epoch
-    """
-
+def eval_model(model, data_loader: DataLoaderTuple):
+    """Perform evaluation of a single epoch."""
     model.eval()
 
-    count = 0
-    correct_count = 0
+    count: int = 0
+    correct_count: int = 0
 
     for i, batch in enumerate(data_loader):
-        # print(f"batch number {i}")
         count += 1
-        images_list, _, _ , _= batch
+        sub_images, _, _ , _= batch
 
-        for images in images_list:
+        for images in sub_images:
             if len(images.shape) == 5:
                 images = images.squeeze(dim=0)
 
-            batch_size = images.size(0)
-            # print(f"size: {batch_size}")
-
-            images = images.to(config.device)
-
-            pred = model.forward_eval(images)
-
+            images: torch.Tensor = images.to(config.device)
+            pred: torch.Tensor = model.forward_eval(images)
 
             if (pred > 0).any():
-                # print("CORRECT")
                 correct_count += 1
                 break
 
@@ -52,10 +42,10 @@ def eval_model(model, data_loader):
 
     return correct_count, count
 
-def interpolate_images(model, amount):
+def interpolate_images(model, amount: int):
     eval_loader: DataLoader = make_eval_loader(
         batch_size=config.batch_size,
-        nr_windows=config.eval_nr_windows,
+        nr_windows=config.sub_images_nr_windows,
     )
 
     image_1 = []
@@ -73,7 +63,7 @@ def interpolate_images(model, amount):
             break
 
     images = torch.stack((image_1, image_2)).to(config.device)
-    recon_images = model.interpolate(images, amount)
+    recon_images: torch.Tensor = model.interpolate(images, amount)
 
     fig=plt.figure(figsize=(16, 16))
 
@@ -92,7 +82,7 @@ def interpolate_images(model, amount):
     plt.imshow(grid.permute(1,2,0).cpu())
     utils.remove_frame(plt)
 
-    plt.show()
+    plt.show(warn=False)
 
 
 
@@ -102,7 +92,7 @@ def main():
     name_list = ["dark male", "dark female", "light male", "light female"]
 
     # Load model
-    model = vae_model.Db_vae(z_dim=config.zdim, device=config.device).to(config.device)
+    model = vae_model.Db_vae(z_dim=config.z_dim, device=config.device).to(config.device)
 
     if not config.path_to_model:
         raise Exception('Load up a model using --path_to_model')
@@ -113,11 +103,11 @@ def main():
     # interpolate_images(model, 20)
     # return
 
-    losses = []
-    recalls = []
+    losses: list = []
+    recalls: list = []
 
-    correct_pos = 0
-    total_count = 0
+    correct_pos: int = 0
+    total_count: int = 0
 
     
     for i in range(4):
@@ -125,13 +115,13 @@ def main():
             batch_size=config.batch_size,
             filter_exclude_skin_color=skin_list[i],
             filter_exclude_gender=gender_list[i],
-            nr_windows=config.eval_nr_windows,
+            nr_windows=config.sub_images_nr_windows,
             stride=config.stride
         )
 
         correct_count, count = eval_model(model, eval_loader)
 
-        recall = correct_count/count * 100
+        recall: float = correct_count/count * 100
         correct_pos += correct_count
         total_count += count
 
@@ -139,22 +129,20 @@ def main():
 
         recalls.append(recall)
 
-    avg_recall = correct_pos/total_count*100
+    avg_recall: float = correct_pos/total_count*100
     print(f"Recall => all:{avg_recall:.3f}, dark male: {recalls[0]:.3f}, dark female: {recalls[1]:.3f}, light male: {recalls[2]:.3f}, light female: {recalls[3]:.3f}")
     print(f"Variance => {(torch.Tensor(recalls)).var().item():.3f}")
 
 #################### NEGATIVE SAMPLING ####################
     eval_loader: DataLoader = make_eval_loader(
-            batch_size=config.batch_size,
-            nr_windows=config.eval_nr_windows,
-            dataset_type=config.eval_dataset,
-            max_images=config.dataset_size
-        )
+        batch_size=config.batch_size,
+        nr_windows=config.sub_images_nr_windows,
+        dataset_type=config.eval_dataset,
+        max_images=config.max_images
+    )
 
-    
-    neg_count, count = eval_model(model, eval_loader)
-    correct_neg = count - neg_count
-    neg_recall = (correct_neg/count) * 100
+    incorrect_neg, count = eval_model(model, eval_loader)
+    correct_neg: int = count - incorrect_neg
 
     wf = open(f"results/{config.path_to_model}/{config.eval_name}", 'a+')
 
