@@ -52,6 +52,8 @@ parser.add_argument('--model_name', type=str,
                     help='name of the model to evaluate')
 parser.add_argument('--hist_size', type=bool,
                     help='Number of histogram')
+parser.add_argument('--run_mode', type=str,
+                    help='Type of main.py run')
 parser.add_argument('-f', type=str,
                     help='Path to kernel json')
 
@@ -88,6 +90,8 @@ def create_run_folder(folder_name):
 
 @dataclass
 class Config:
+    # Running main for train, eval or both
+    run_mode: str = 'both' if ARGS.run_mode is None else ARGS.run_mode
     # Folder name of the run
     run_folder: str = '' if ARGS.folder_name is None else ARGS.folder_name
     # Path to CelebA images

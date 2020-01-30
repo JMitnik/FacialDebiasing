@@ -15,25 +15,20 @@ from dataclasses import asdict
 
 def make_trainer(config: Config, load_model: bool = False):
      return Trainer(
-          load_model=load_model, 
+          load_model=load_model,
           config=config,
           **asdict(config)
      )
 
-# trainer = make_trainer(config)
-# trainer.train(10)
-
-def make_evaluator(config: Config):
+def make_evaluator(config: Config, trained_model: Optional = None):
      """Creates an Evaluator object which is ready to .eval on, or .eval_on_setups in case of the automated experience. """
      return Evaluator(
           nr_windows=config.sub_images_nr_windows,
           path_to_eval_dataset=config.path_to_eval_face_images,
           config=config,
+          model=trained_model,
           **asdict(config)
      )
-
-# evaluator = make_evaluator(config)
-# evaluator.eval_on_setups('Test')
 
 def classify_image(
      path_to_image: str,
@@ -58,7 +53,7 @@ def classify_image(
      sub_images: torch.Tensor = slide_windows_over_img(img, 30, 64, 10, 0.2)
      sub_images = torch.split(sub_images, batch_size)
 
-     if utils.find_face_in_subimages(model, sub_images):
+     if utils.find_face_in_subimages(model, sub_images, device):
           logger.success("This is a face!")
           return True
      else:
@@ -86,3 +81,20 @@ def classify_random_image(
 
 if __name__ == "__main__":
      config = Config()
+
+     if config.run_mode == 'train':
+          logger.info("Running training only")
+          trainer = make_trainer(config)
+          trainer.train()
+     elif config.run_mode == 'eval':
+          logger.info("Running evaluation only")
+          evaluator = make_evaluator(config)
+          evaluator.eval_on_setups('run_mode')
+     else:
+          logger.info("Running training and evaluation this model")
+
+          trainer = make_trainer(config)
+          trainer.train()
+
+          evaluator = make_evaluator(config, trainer.model)
+          evaluator.eval_on_setups('run_mode')
