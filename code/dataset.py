@@ -62,7 +62,7 @@ def make_h5_datasets(path_to_h5_train: str, **kwargs):
             tip="Double check your path_to_h5_train in the config, and check if you downloaded the appropriate .h5 file"
         )
         raise Exception
-    
+
     with h5py.File(config.path_to_h5_train, mode='r') as h5_file:
         labels = h5_file['labels'][()].flatten()
         files = h5_file['images']
@@ -156,18 +156,18 @@ def make_eval_loader(
 
         dataset = ImagenetDataset(
             path_to_images=config.path_to_eval_nonface_images,
-            get_sub_images=True
+            get_sub_images=True,
             **kwargs
         )
     else:
         logger.info('Evaluating on Imagenet H5')
 
-        _, h5_nonfaces = make_h5_datasets()
+        _, h5_nonfaces = make_h5_datasets(**kwargs)
 
         dataset = H5Imagenet(
             path_to_images='',
             h5_dataset=h5_nonfaces.dataset,
-            get_sub_images=True
+            get_sub_images=True,
             **kwargs
         )
 

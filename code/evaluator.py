@@ -17,6 +17,7 @@ class Evaluator:
         device: str,
         nr_windows: int,
         stride: float,
+        model_name: str,
         path_to_model: Optional[str] = None,
         model: Optional[Db_vae] = None,
         **kwargs
@@ -24,6 +25,7 @@ class Evaluator:
         self.z_dim = z_dim
         self.device = device
         self.batch_size = batch_size
+        self.model_name = model_name
         self.nr_windows = nr_windows
         self.stride = stride
 
@@ -46,7 +48,7 @@ class Evaluator:
         )
         raise Exception
 
-    def eval(self, filter_exclude_skin_color: List[str] = [], filter_exclude_gender: List[str] = [], 
+    def eval(self, filter_exclude_skin_color: List[str] = [], filter_exclude_gender: List[str] = [],
                    dataset_type: str= ""):
         self.model.eval()
 
