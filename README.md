@@ -62,7 +62,7 @@ Main.py can be run with a majority of the flags (see the Config parameters).
 Some of the most important ones:
 * run_mode: Running 'training' / 'evaluation' / 'both'
 * debias_type: Which method to use for debiassing 'max' / 'max5' / 'gaussian'
-* path_to_model: Debias typ
+* path_to_model: path to a model's root directory (from code/results as root).
 
 ## Config parameters
 
