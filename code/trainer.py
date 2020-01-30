@@ -277,7 +277,7 @@ class Trainer:
         fig.show()
 
         return
-    
+
     def best_and_worst(self, n_rows=4):
         """Calculates the validation error of the model."""
         face_loader, nonface_loader = self.valid_loaders
@@ -318,4 +318,4 @@ class Trainer:
 
         fig.show()
 
-        return 
+        return
