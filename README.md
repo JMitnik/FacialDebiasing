@@ -25,7 +25,7 @@ It is recommended to run the code and installation in the '/code' folder, keepin
 <!-- Rename the code directory to our source-code directory: debias -->
 To install the necessary dependencies, one requirement is to have conda installed (tested on conda 4.8.2). In the code folder, install all necessary requirements by running the following command in your terminal:
 
-If the environment contains CUDA (Linux / Windows):
+If the environment is Linux:
 
 ```bash
 # Create an environment
@@ -40,6 +40,15 @@ If the environment is Mac:
 conda env create -f environment.yml
 # Activate your environment
 conda activate Msc_AI_FACT
+```
+
+
+If the environment is Windows:
+```bash
+# Create an environment
+conda env create -f windows_environment.yml
+# Activate your environment
+conda activate Msc_AI_FACT_Windows
 ```
 
 ### Getting the dataset
