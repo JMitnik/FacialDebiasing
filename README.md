@@ -2,12 +2,12 @@
 Affiliation: University of Amsterdam
 
 Students: 
-   * Lucas Fijen (10813268) 
-   * Dante Nieuwenhuis (11058595) 
-   * Jonathan Mitnik (10911197) 
-   * Pieter de Marez Oyens (10002403)
+   * Lucas Fijen (10813268), lucas.fijen@gmail.com
+   * Dante Nieuwenhuis (11058595), d.niewenhuis@hotmail.com 
+   * Jonathan Mitnik (10911197), jmitnik@gmail.com 
+   * Pieter de Marez Oyens (10002403), oyenspieter@gmail.com
 
-TA: Simon Passenheim
+TA: Simon Passenheim, :	simon.passenheim@gmail.com
 
 # Debiasing: Mitigating Algorithmic Bias
 
