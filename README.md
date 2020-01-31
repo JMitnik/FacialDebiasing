@@ -31,7 +31,7 @@ If the environment is Linux:
 # Create an environment
 conda env create -f cuda_environment.yml
 # Activate your environment
-conda activate Msc_AI_FACT_CUDA
+conda activate Msc_AI_FACT_Cuda
 ```
 
 If the environment is Mac:
