@@ -48,6 +48,7 @@ class PPBDataset(GenericImageDataset):
 
 
     def _apply_filters_to_metadata(self, df: pd.DataFrame):
+        """Allows filters to filter out countries, skin-colors and genders."""
         result = df
 
         if len(self.filter_excl_country):
