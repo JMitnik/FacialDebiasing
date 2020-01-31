@@ -60,7 +60,7 @@ class Evaluator:
         raise Exception
 
     def eval(self, filter_exclude_skin_color: List[str] = [], filter_exclude_gender: List[str] = [],
-                   dataset_type: str= ""):
+                   dataset_type: str= "", max_images: int = -1):
         """Evaluates a model based and returns the amount of correctly classified and total classified images."""
         self.model.eval()
 
@@ -75,6 +75,7 @@ class Evaluator:
                 filter_exclude_skin_color=filter_exclude_skin_color,
                 filter_exclude_gender=filter_exclude_gender,
                 dataset_type=dataset_type,
+                max_images=max_images,
                 **asdict(self.config)
             )
 
@@ -119,7 +120,8 @@ class Evaluator:
         variance = (torch.tensor(recalls)).var().item()
 
         # Calculate the amount of negative performance
-        incorrect_neg, neg_count = self.eval(dataset_type='h5_imagenet')
+        logger.info("Evaluating on negative samples")
+        incorrect_neg, neg_count = self.eval(dataset_type='h5_imagenet', max_images=1270)
         correct_neg: int = neg_count - incorrect_neg
 
         # Calculate the precision and accuracy
