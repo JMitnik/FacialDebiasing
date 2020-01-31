@@ -144,12 +144,10 @@ class Db_vae(nn.Module):
         self.c3 = 0.1
 
         self.num_bins = num_bins
-        # self.num_bins = 500
         self.min_val = -15
         self.max_val = 15
         self.xlin = np.linspace(self.min_val, self.max_val, self.num_bins).reshape(1,1,self.num_bins)
         self.hist = np.zeros((z_dim, self.num_bins))
-        # self.hist = torch.ones((z_dim, self.num_bins)).to(self.device)
         self.means = torch.Tensor().to(self.device)
         self.std = torch.Tensor().to(self.device)
 
@@ -274,28 +272,17 @@ class Db_vae(nn.Module):
             Make sure you only put faces into this
             functions
         """
-
-        # samples_per_dist = 1000
-
         _, mean, std = self.encoder(input)
 
         self.means = torch.cat((self.means, mean))
         self.std = torch.cat((self.std, std))
-        
+
         values = norm.pdf(self.xlin, mean.unsqueeze(-1).cpu(), std.unsqueeze(-1).cpu()).sum(0)
         self.hist += values
-        # dist = torch.distributions.normal.Normal(mean, std)
-        # z = dist.rsample((samples_per_dist,)).to(self.device)
-        # NOTE those samples are added to the first axis!
-
-        # self.hist += torch.stack([torch.histc(z[:, :, i],
-        #                           min=self.min_val,
-        #                           max=self.max_val,
-        #                           bins=self.num_bins) for i in range(self.z_dim)])
 
         return
 
-    def get_histo_base(self):
+    def get_histo_max(self):
         probs = torch.zeros_like(self.means[:,0]).to(self.device)
 
         for i in range(self.z_dim):
@@ -345,7 +332,7 @@ class Db_vae(nn.Module):
         print(probs)
         return probs
 
-    def get_histo_our(self):
+    def get_histo_gaussian(self):
         """
             Returns the probabilities given the means given the histo values
         """
@@ -358,7 +345,6 @@ class Db_vae(nn.Module):
                 i_end = self.means.shape[0]
             mean = self.means[i:i_end, :]
             std = self.std[i:i_end, :]
-
 
             lins = norm.pdf(self.xlin, mean.unsqueeze(-1).cpu(), std.unsqueeze(-1).cpu())
             Q = lins * self.hist
@@ -392,7 +378,7 @@ class Db_vae(nn.Module):
         (from bernoulli) and the means for these bernoullis (as these are
         used to plot the data manifold).
         """
-        
+
         with torch.no_grad():
             z_samples = torch.randn(n_samples, self.z_dim).to(self.device)
             sampled_images = self.decoder(z_samples)

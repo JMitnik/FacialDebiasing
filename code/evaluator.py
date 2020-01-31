@@ -74,7 +74,9 @@ class Evaluator:
         correct_count, count = self.eval_model(eval_loader)
         return correct_count, count
 
-    def eval_on_setups(self, eval_name: str):
+    def eval_on_setups(self, eval_name: Optional[str] = None):
+        eval_name = self.config.eval_name if eval_name is None else eval_name
+
         # Define the setups
         gender_list = [["Female"], ["Male"], ["Female"], ["Male"]]
         skin_list = [["lighter"], ["lighter"], ["darker"], ["darker"]]
@@ -114,10 +116,10 @@ class Evaluator:
         accuracy = (correct_pos + correct_neg)/(2*1270)*100
 
         # Logger info
-        logger.info(f"Recall => all: {avg_recall:.3f}") 
+        logger.info(f"Recall => all: {avg_recall:.3f}")
         logger.info(f"Recall => dark male: {recalls[0]:.3f}")
         logger.info(f"Recall => dark female: {recalls[1]:.3f}")
-        logger.info(f"Recall => white male: {recalls[2]:.3f}") 
+        logger.info(f"Recall => white male: {recalls[2]:.3f}")
         logger.info(f"Recall => white female: {recalls[3]:.3f}")
         logger.info(f"Variance => {variance:.3f}")
         logger.info(f"Precision => {precision:.3f}")
