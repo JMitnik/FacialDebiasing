@@ -6,6 +6,7 @@ from datetime import datetime
 import sys
 
 class Logger:
+    """Custom class the is owned and created by the illustrious Jonathan Mitnik."""
     def __init__(self, debug: bool = False):
         self.sym_error = '❌'
         self.sym_success = '✅'

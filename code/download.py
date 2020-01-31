@@ -10,6 +10,7 @@ dname = os.path.dirname(abspath)
 os.chdir(dname)
 
 def ensure_path(path):
+    """Makes sure a path exists and otherwise creates one."""
     if not os.path.exists(path):
         os.makedirs(os.path.dirname(path), exist_ok=True)
 

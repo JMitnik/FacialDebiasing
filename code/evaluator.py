@@ -10,6 +10,10 @@ from dataset import make_eval_loader
 from dataclasses import asdict
 
 class Evaluator:
+    """
+    Class the holds different helper functions that evaluate a model based on the model
+    and displays several performance rates. 
+    """
     def __init__(
         self,
         path_to_eval_dataset,
@@ -38,6 +42,7 @@ class Evaluator:
         self.path_to_eval_dataset = path_to_eval_dataset
 
     def init_model(self, path_to_model: Optional[str] = None, model: Optional[Db_vae] = None):
+        """Initializes a stored model or one that directly comes from training."""
         if model is not None:
             logger.info("Using model passed")
             return model.to(self.device)
@@ -55,6 +60,7 @@ class Evaluator:
 
     def eval(self, filter_exclude_skin_color: List[str] = [], filter_exclude_gender: List[str] = [],
                    dataset_type: str= ""):
+        """Evaluates a model based and returns the amount of correctly classified and total classified images."""
         self.model.eval()
 
         if dataset_type == "":
@@ -75,6 +81,7 @@ class Evaluator:
         return correct_count, count
 
     def eval_on_setups(self, eval_name: str):
+        """Evaluates a model and writes the results to a given file name."""
         # Define the setups
         gender_list = [["Female"], ["Male"], ["Female"], ["Male"]]
         skin_list = [["lighter"], ["lighter"], ["darker"], ["darker"]]
