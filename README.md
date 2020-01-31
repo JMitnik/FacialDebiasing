@@ -7,7 +7,7 @@ Students:
    * Jonathan Mitnik (10911197), jmitnik@gmail.com 
    * Pieter de Marez Oyens (10002403), oyenspieter@gmail.com
 
-TA: Simon Passenheim, simon.passenheim@googlemail.com
+TA: Simon Passenheim, :	simon.passenheim@gmail.com
 
 # Debiasing: Mitigating Algorithmic Bias
 
