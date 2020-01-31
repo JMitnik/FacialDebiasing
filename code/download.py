@@ -27,7 +27,7 @@ else:
 
 
 # Fetch train data
-path_to_test_data = 'data/pbb/PBB.tar'
+path_to_test_data = 'data/ppb/PPB.tar'
 test_url = 'https://www.dropbox.com/s/l0lp6qxeplumouf/PPB.tar?dl=1'
 
 if not os.path.exists(path_to_test_data):
