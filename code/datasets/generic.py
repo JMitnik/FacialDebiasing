@@ -9,6 +9,7 @@ import torch.nn as nn
 from torch.utils.data import Dataset
 
 class GenericImageDataset(Dataset):
+    """Generic dataset which defines all basic operations for the images."""
     def __init__(
         self,
         path_to_images: str,

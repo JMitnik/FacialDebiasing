@@ -19,4 +19,5 @@ class ImageDirectory(GenericImageDataset):
         return img
 
     def init_store(self):
+        """Sets self.store to be list of images."""
         return list(Path().glob(f'{self.path_to_images}/**/*.jpg'))

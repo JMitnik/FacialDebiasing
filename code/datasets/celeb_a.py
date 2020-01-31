@@ -32,6 +32,7 @@ class CelebDataset(GenericImageDataset):
         return len(self.store)
 
     def init_store(self, path_to_celeba_bbox_file):
+        """Sets self.store to be a dataframe of the bbox file."""
         if not os.path.exists(path_to_celeba_bbox_file):
             logger.error(f"Path to bbox does not exist at {path_to_celeba_bbox_file}!")
             raise Exception
