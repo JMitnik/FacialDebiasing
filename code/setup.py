@@ -147,7 +147,7 @@ class Config:
     # Evaluation window maximum
     eval_max_size: int = 64
     # Uses h5 instead of the imagenet files
-    use_h5: bool = False if ARGS.use_h5 is None else ARGS.use_h5
+    use_h5: bool = True if ARGS.use_h5 is None else ARGS.use_h5
     # Debug mode prints several statistics
     debug_mode: bool = False if ARGS.debug_mode is None else ARGS.debug_mode
     # Dataset for evaluation
