@@ -71,12 +71,13 @@ class Evaluator:
                 **asdict(self.config)
             )
         else:
+            params = {**asdict(self.config), max_images: max_images}
+
             eval_loader: DataLoader = make_eval_loader(
                 filter_exclude_skin_color=filter_exclude_skin_color,
                 filter_exclude_gender=filter_exclude_gender,
                 dataset_type=dataset_type,
-                **asdict(self.config),
-                max_images=max_images
+                **params
             )
 
         correct_count, count = self.eval_model(eval_loader)
