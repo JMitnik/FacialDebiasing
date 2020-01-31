@@ -118,7 +118,6 @@ class Decoder(nn.Module):
 
 
 class Db_vae(nn.Module):
-
     def __init__(
         self,
         z_dim: int = 20,

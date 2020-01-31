@@ -107,6 +107,7 @@ class Trainer:
                     f"alpha: {self.alpha}\n"
                     f"num_bins: {self.num_bins}\n"
         )
+
         return Db_vae(
             z_dim=self.z_dim,
             hist_size=self.hist_size,
@@ -213,7 +214,7 @@ class Trainer:
         worst_imgs = utils.sample_idxs_from_loader(all_index[lowest_probs], data_loader, 1)
 
         img_list = (highest_imgs, worst_imgs)
-        titles = ("Highest", "Lowest")
+        titles = ("Highest weights", "Lowest weights")
         fig = plt.figure(figsize=(16, 16))
 
         for i in range(2):

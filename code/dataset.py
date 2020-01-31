@@ -96,7 +96,7 @@ def make_train_and_valid_loaders(
     random_seed = '',
     **kwargs
 ):
-"""Create two dataloaders, one for training data and one for validation data."""
+    """Create two dataloaders, one for training data and one for validation data."""
     nr_images: Optional[int] = max_images if max_images >= 0 else None
 
     # Create the datasets
@@ -111,7 +111,7 @@ def make_train_and_valid_loaders(
     # Split both datasets into training and validation
     celeb_train, celeb_valid = split_dataset(celeb_dataset, train_size, random_seed, nr_images)
     imagenet_train, imagenet_valid = split_dataset(imagenet_dataset, train_size, random_seed, nr_images)
-    logger.info(f"Sizes of dataset are:\n" 
+    logger.info(f"Sizes of dataset are:\n"
                 f"Celeb-train: {len(celeb_train)}\n"
                 f"Celeb-valid: {len(celeb_valid)}\n"
                 f"Imagenet-train: {len(imagenet_train)}\n"
@@ -158,7 +158,7 @@ def make_eval_loader(
     dataset_type: str = EvalDatasetType.PBB_ONLY.value,
     **kwargs
 ):
-"""Creates an evaluaion data loader."""
+    """Creates an evaluaion data loader."""
     if dataset_type == EvalDatasetType.PBB_ONLY.value:
         logger.info('Evaluating on PPB')
 

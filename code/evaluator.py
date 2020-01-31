@@ -84,7 +84,8 @@ class Evaluator:
     def eval_on_setups(self, eval_name: Optional[str] = None):
         """Evaluates a model and writes the results to a given file name."""
         eval_name = self.config.eval_name if eval_name is None else eval_name
-        # Define the setups
+
+        # Define the predefined setups
         gender_list = [["Female"], ["Male"], ["Female"], ["Male"]]
         skin_list = [["lighter"], ["lighter"], ["darker"], ["darker"]]
         name_list = ["dark male", "dark female", "light male", "light female"]
@@ -94,6 +95,7 @@ class Evaluator:
         correct_pos = 0
         total_count = 0
 
+        # Go through the predefined setups
         for i in range(4):
             logger.info(f"Running setup for {name_list[i]}")
 
@@ -116,9 +118,11 @@ class Evaluator:
         avg_recall = correct_pos/total_count*100
         variance = (torch.tensor(recalls)).var().item()
 
-        incorrect_neg, neg_count = self.eval()
+        # Calculate the amount of negative performance
+        incorrect_neg, neg_count = self.eval(dataset_type='h5_imagenet')
         correct_neg: int = neg_count - incorrect_neg
 
+        # Calculate the precision and accuracy
         precision = correct_pos/(correct_pos + neg_count)*100
         accuracy = (correct_pos + correct_neg)/(2*1270)*100
 
@@ -132,8 +136,14 @@ class Evaluator:
         logger.info(f"Precision => {precision:.3f}")
         logger.info(f"Accuracy => {accuracy:.3f}")
 
-        with open(f"results/{self.path_to_model}/{eval_name}", 'a+') as write_file:
-            write_file.write(f"name,dark male,dark female,light male,light female,var,precision,recall,accuracy\n")
+        # Write final results
+        path_to_eval_results = f"results/{self.path_to_model}/{eval_name}"
+        with open(path_to_eval_results, 'a+') as write_file:
+
+            # If file has no header
+            if not os.path.exists(path_to_eval_results) or os.path.getsize(path_to_eval_results) == 0:
+                write_file.write(f"name,dark male,dark female,light male,light female,var,precision,recall,accuracy\n")
+
             write_file.write(f"{self.path_to_model}_{self.model_name}")
             write_file.write(f",{recalls[0]:.3f},{recalls[1]:.3f},{recalls[2]:.3f},{recalls[3]:.3f},{variance:.3f},{precision:.3f},{avg_recall:.3f},{accuracy:.3f}\n")
 
