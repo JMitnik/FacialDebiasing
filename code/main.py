@@ -21,6 +21,7 @@ os.chdir(dname)
 
 
 def make_trainer(config: Config, load_model: bool = False):
+     """Creates an Evaluator object which is ready to .train on. Allows .load_model to load file. """
      return Trainer(
           load_model=load_model,
           config=config,
@@ -45,6 +46,7 @@ def classify_image(
      device: Optional[str] = None,
      batch_size: int = 10
 ):
+     """Classify an image from a particular path, given either an intitialized model or path to model."""
      if not model and not path_to_model:
           logger.error(
                "No model or path_to_model given",
@@ -74,6 +76,7 @@ def classify_random_image(
      device: Optional[str] = None,
      batch_size: int = 10
 ):
+     """Classify a random image from the data directory."""
      path_to_data = 'data/**/*.jpg'
      images = list(Path().glob(path_to_data))
      idx = np.random.choice(len(images))
@@ -83,8 +86,6 @@ def classify_random_image(
 
      utils.visualize_tensor(img)
      classify_image(path_to_img, path_to_model=path_to_model, z_dim=z_dim, device=device, batch_size=batch_size)
-
-# classify_random_image(path_to_model='dante', z_dim=200, device=config.device)
 
 if __name__ == "__main__":
      config = Config()

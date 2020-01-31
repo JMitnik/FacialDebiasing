@@ -38,6 +38,7 @@ class Trainer:
         config: Optional = None,
         **kwargs
     ):
+        """Wrapper class which trains a model."""
         init_trainining_results(config)
         self.epochs = epochs
         self.load_model = load_model
@@ -225,7 +226,7 @@ class Trainer:
 
             utils.remove_frame(plt)
 
-        path_to_results = f"results/{self.config.run_folder}/bias_props/epoch={epoch}"
+        path_to_results = f"results/{self.config.run_folder}/bias_probs/epoch={epoch}"
         logger.save("Saving a bias probability figure in {path_to_results}")
 
         fig.savefig(path_to_results, bbox_inches='tight')
