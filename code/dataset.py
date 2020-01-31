@@ -97,14 +97,21 @@ def make_train_and_valid_loaders(
 
     # Create the datasets
     if use_h5:
+        logger.info("Creating the celeb and imagenet dataset from the h5 file!")
         celeb_dataset, imagenet_dataset = make_h5_datasets(**kwargs)
     else:
+        logger.info("Creating the Imagenet and CelebDataset")
         imagenet_dataset = ImagenetDataset(path_to_images=path_to_imagenet_images, **kwargs)
         celeb_dataset = CelebDataset(path_to_images=path_to_celeba_images, **kwargs)
 
     # Split both datasets into training and validation
     celeb_train, celeb_valid = split_dataset(celeb_dataset, train_size, random_seed, nr_images)
     imagenet_train, imagenet_valid = split_dataset(imagenet_dataset, train_size, random_seed, nr_images)
+    logger.info(f"Sizes of dataset are:\n" 
+                f"Celeb-train: {len(celeb_train)}\n"
+                f"Celeb-valid: {len(celeb_valid)}\n"
+                f"Imagenet-train: {len(imagenet_train)}\n"
+                f"Imagenet-valid: {len(imagenet_valid)}\n")
 
     # Nonfaces loaders
     train_nonfaces_loader: DataLoader = DataLoader(imagenet_train, batch_size=int(batch_size / 2), shuffle=shuffle, num_workers=num_workers)
@@ -181,6 +188,7 @@ def make_eval_loader(
     nr_images: Optional[int] = max_images if max_images >= 0 else None
 
     if nr_images:
+        logger.info("Evaluation on a sub-set of {nr_images} nr images")
         dataset = subsample_dataset(dataset, nr_images, random=True)
 
     # Concat and wrap with loader

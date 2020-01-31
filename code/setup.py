@@ -103,7 +103,7 @@ class Config:
     # Path to evaluation images (Faces)
     path_to_eval_face_images: str = 'data/ppb/PPB-2017/imgs'
     # Path to evaluation metadata
-    path_to_eval_metadata: str = 'data/ppb/PPB-2017-metadata.csv'
+    path_to_eval_metadata: str = 'data/ppb/PPB-2017/PPB-2017-metadata.csv'
     # Path to evaluation images (Nonfaces such as Imagenet)
     path_to_eval_nonface_images: str = 'data/imagenet'
     # Path to stored model
@@ -147,7 +147,7 @@ class Config:
     # Evaluation window maximum
     eval_max_size: int = 64
     # Uses h5 instead of the imagenet files
-    use_h5: bool = False if ARGS.use_h5 is None else ARGS.use_h5
+    use_h5: bool = True if ARGS.use_h5 is None else ARGS.use_h5
     # Debug mode prints several statistics
     debug_mode: bool = False if ARGS.debug_mode is None else ARGS.debug_mode
     # Dataset for evaluation

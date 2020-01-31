@@ -1,3 +1,14 @@
+# Student and Affiliation Information
+Affiliation: University of Amsterdam
+
+Students: 
+   * Lucas Fijen (10813268) 
+   * Dante Nieuwenhuis (11058595) 
+   * Jonathan Mitnik (10911197) 
+   * Pieter de Marez Oyens (10002403)
+
+TA: Simon Passenheim
+
 # Debiasing: Mitigating Algorithmic Bias
 
 <!-- TODO: Add final paper name -->

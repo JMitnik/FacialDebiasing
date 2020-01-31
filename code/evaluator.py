@@ -39,6 +39,7 @@ class Evaluator:
 
     def init_model(self, path_to_model: Optional[str] = None, model: Optional[Db_vae] = None):
         if model is not None:
+            logger.info("Using model passed")
             return model.to(self.device)
 
         # If path_to_model, load model from file

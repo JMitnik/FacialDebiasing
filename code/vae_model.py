@@ -167,8 +167,16 @@ class Db_vae(nn.Module):
             raise Exception
 
         model: Db_vae = Db_vae(z_dim=z_dim, device=device)
-        model.load_state_dict(torch.load(full_path_to_model, map_location=device))
 
+        try:
+            model.load_state_dict(torch.load(full_path_to_model, map_location=device))
+        except:
+            logger.error("Unable to load model from {full_path_to_model}.",
+                        next_step="Model will not initialize",
+                        tip="Did you use the right config parameters, or custom layers from the stored model?"
+            )
+
+        logger.info(f"Loaded model from {path_to_model}!")
         return model
 
 
