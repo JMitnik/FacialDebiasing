@@ -85,11 +85,10 @@ As a user, you can play around with the notebook via the *Config* parameters. In
 * Load different models
 * Batch-size for training
 
-The notebook consists of 4 main parts:
+The notebook consists of **3 main parts**:
 * Training a new model
 * Evaluation of a model based on its path (or optionally pass a model to the evaluator init)
-* Loading a trainer with an already-trained model
-* Our own final results in this experimental setup.
+* Our *own final results* in this experimental setup.
 
 ## Running the code via main.py
 
