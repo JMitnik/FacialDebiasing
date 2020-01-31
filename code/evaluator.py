@@ -12,8 +12,8 @@ from dataclasses import asdict
 
 class Evaluator:
     """
-    Class the holds different helper functions that evaluate a model based on the model
-    and displays several performance rates.
+    Class that evaluates a model based on a given pre-initialized model or path_to_model
+    and displays several performance metrics.
     """
     def __init__(
         self,
