@@ -75,8 +75,8 @@ class Evaluator:
                 filter_exclude_skin_color=filter_exclude_skin_color,
                 filter_exclude_gender=filter_exclude_gender,
                 dataset_type=dataset_type,
-                max_images=max_images,
-                **asdict(self.config)
+                **asdict(self.config),
+                max_images=max_images
             )
 
         correct_count, count = self.eval_model(eval_loader)
@@ -96,7 +96,7 @@ class Evaluator:
         correct_pos = 0
         total_count = 0
 
-        # Go through the predefined setups
+        # Go through the predefined setup
         for i in range(4):
             logger.info(f"Running setup for {name_list[i]}")
 
