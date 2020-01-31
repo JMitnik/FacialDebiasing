@@ -75,7 +75,7 @@ The 'h5' dataset for training can be downloaded from [this url](https://www.drop
 
 ---
 
-## Running the notebook
+## Running the code via the main.ipynb notebook
 
 To run the notebook, run `jupyter notebook` from the /code folder (as root).
 
@@ -85,7 +85,13 @@ As a user, you can play around with the notebook via the *Config* parameters. In
 * Load different models
 * Batch-size for training
 
-## Running main.py
+The notebook consists of 4 main parts:
+* Training a new model
+* Evaluation of a model based on its path (or optionally pass a model to the evaluator init)
+* Loading a trainer with an already-trained model
+* Our own final results in this experimental setup.
+
+## Running the code via main.py
 
 Main.py can be run with a majority of the flags (see the Config parameters).
 
