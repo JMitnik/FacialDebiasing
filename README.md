@@ -1,3 +1,14 @@
+# Student and Affiliation Information
+Affiliation: University of Amsterdam
+
+Students: 
+   * Lucas Fijen (10813268) 
+   * Dante Nieuwenhuis (11058595) 
+   * Jonathan Mitnik (10911197) 
+   * Pieter de Marez Oyens (10002403)
+
+TA: Simon Passenheim
+
 # Debiasing: Mitigating Algorithmic Bias
 
 <!-- TODO: Add final paper name -->
@@ -14,11 +25,30 @@ It is recommended to run the code and installation in the '/code' folder, keepin
 <!-- Rename the code directory to our source-code directory: debias -->
 To install the necessary dependencies, one requirement is to have conda installed (tested on conda 4.8.2). In the code folder, install all necessary requirements by running the following command in your terminal:
 
+If the environment is Linux:
+
 ```bash
-    # Create an environment
-    conda env create -f environment.yml
-    # Activate your environment
-    conda activate Msc_AI_FACT
+# Create an environment
+conda env create -f cuda_environment.yml
+# Activate your environment
+conda activate Msc_AI_FACT_Cuda
+```
+
+If the environment is Mac:
+```bash
+# Create an environment
+conda env create -f environment.yml
+# Activate your environment
+conda activate Msc_AI_FACT
+```
+
+
+If the environment is Windows:
+```bash
+# Create an environment
+conda env create -f windows_environment.yml
+# Activate your environment
+conda activate Msc_AI_FACT_Windows
 ```
 
 ### Getting the dataset
@@ -28,7 +58,7 @@ To install the necessary dependencies, one requirement is to have conda installe
 Inside the code directory, run the following code in your terminal:
 
 ```bash
-    python download.py
+python download.py
 ```
 
 This will by default download the data into code/data.
@@ -65,13 +95,13 @@ Some of the most important ones:
 * path_to_model: path to a model's root directory (from code/results as root).
 
 ## Config parameters
-
 | Parameters               | Type          | Default value                      | Description                                        | Flag (--) |
 |--------------------------|---------------|------------------------------------|----------------------------------------------------|-----------|
+| run_mode                 | str           | 'both'                             | Mode to run main.py in (train/eval/both)           | [x]       |
 | path_to_celeba_images    | str           | 'data/celeba/images'               | Path to separate CelebA images used for training   |           |
 | path_to_celeba_bbox_file | str           | 'data/celeba/list_bbox_celeba.txt' | Path to separate CelebA bbox used for training     |           |
 | path_to_imagenet_images  | str           | 'data/imagenet'                    | Path to separate Imagenet folder used for training |           |
-| path_to_eval_face_images | str           | 'data/ppb/PPB-2017/imgs'                    | Path to PPB folder used for evaluation             |           |
+| path_to_eval_face_images | str           | 'data/ppb/PPB-2017/imgs'           | Path to PPB folder used for evaluation             |           |
 | path_to_eval_metadata    | str           | 'data/ppb/PPB-2017-metadata.csv'   | Path to PPB evaluation                             |           |
 | path_to_model            | Optional[str] |                                    | Path to stored model                               | [x]       |
 | path_to_h5_train         | str           | 'data/h5_train/train_face.h5'      | Path to h5                                         |           |

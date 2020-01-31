@@ -52,6 +52,8 @@ parser.add_argument('--model_name', type=str,
                     help='name of the model to evaluate')
 parser.add_argument('--hist_size', type=bool,
                     help='Number of histogram')
+parser.add_argument('--run_mode', type=str,
+                    help='Type of main.py run')
 parser.add_argument('-f', type=str,
                     help='Path to kernel json')
 
@@ -88,24 +90,26 @@ def create_run_folder(folder_name):
 
 @dataclass
 class Config:
+    # Running main for train, eval or both
+    run_mode: str = 'both' if ARGS.run_mode is None else ARGS.run_mode
     # Folder name of the run
     run_folder: str = '' if ARGS.folder_name is None else ARGS.folder_name
     # Path to CelebA images
-    path_to_celeba_images: str = '../../data/celeba/images'
+    path_to_celeba_images: str = 'data/celeba/images'
     # Path to CelebA bounding-boxes
-    path_to_celeba_bbox_file: str = '../../data/celeba/list_bbox_celeba.txt'
+    path_to_celeba_bbox_file: str = 'data/celeba/list_bbox_celeba.txt'
     # Path to ImageNet images
-    path_to_imagenet_images: str = '../../data/imagenet'
+    path_to_imagenet_images: str = 'data/imagenet'
     # Path to evaluation images (Faces)
-    path_to_eval_face_images: str = '../../data/ppb/imgs'
+    path_to_eval_face_images: str = 'data/ppb/PPB-2017/imgs'
     # Path to evaluation metadata
-    path_to_eval_metadata: str = '../../data/ppb/PPB-2017-metadata.csv'
+    path_to_eval_metadata: str = 'data/ppb/PPB-2017/PPB-2017-metadata.csv'
     # Path to evaluation images (Nonfaces such as Imagenet)
-    path_to_eval_nonface_images: str = '../../data/imagenet'
+    path_to_eval_nonface_images: str = 'data/imagenet'
     # Path to stored model
     path_to_model: Optional[str] = ARGS.path_to_model
     # Path to h5
-    path_to_h5_train: str = '../../data/h5_train/train_face.h5'
+    path_to_h5_train: str = 'data/h5_train/train_face.h5'
     # Type of debiasing used
     debias_type: str = ARGS.debias_type or 'none'
     # name of the model to evaluate
@@ -143,7 +147,7 @@ class Config:
     # Evaluation window maximum
     eval_max_size: int = 64
     # Uses h5 instead of the imagenet files
-    use_h5: bool = False if ARGS.use_h5 is None else ARGS.use_h5
+    use_h5: bool = True if ARGS.use_h5 is None else ARGS.use_h5
     # Debug mode prints several statistics
     debug_mode: bool = False if ARGS.debug_mode is None else ARGS.debug_mode
     # Dataset for evaluation

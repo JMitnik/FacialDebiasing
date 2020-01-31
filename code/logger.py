@@ -6,6 +6,7 @@ from datetime import datetime
 import sys
 
 class Logger:
+    """Custom class the is owned and created by the illustrious Jonathan Mitnik."""
     def __init__(self, debug: bool = False):
         self.sym_error = '❌'
         self.sym_success = '✅'
@@ -33,7 +34,7 @@ class Logger:
         full_datetime_stamp = current_datetime.strftime("%d_%m_%Y-%H_%M_%S")
         current_date_stamp = current_datetime.strftime("%d_%m_%Y")
 
-        log = logging.getLogger('my_logger')
+        log = logging.getLogger('DebiasingModel')
         handler = logging.StreamHandler(sys.stdout)
         handler.setLevel(logging.INFO)
         formatter = logging.Formatter(

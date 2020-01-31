@@ -17,6 +17,7 @@ from datasets.imagenet import ImagenetDataset
 from datasets.ppb import PPBDataset
 
 def split_dataset(dataset, train_size: float, random_seed, max_images: Optional[int] = None):
+    """Splits a dataset into a certain (maximum) size."""
     # Shuffle indices of the dataset
     idxs: np.array = np.arange(len(dataset))
     np.random.seed(random_seed)
@@ -37,6 +38,7 @@ def split_dataset(dataset, train_size: float, random_seed, max_images: Optional[
     return train_data, valid_data
 
 def concat_datasets(dataset_a, dataset_b, proportion_a: Optional[float] = None):
+    """Concatenates two different datasets."""
     if proportion_a:
         proportion_b = 1 - proportion_a
         # Calculate amount of dataset
@@ -54,6 +56,7 @@ def concat_datasets(dataset_a, dataset_b, proportion_a: Optional[float] = None):
     return ConcatDataset([sampled_dataset_a, sampled_dataset_b])
 
 def make_h5_datasets(path_to_h5_train: str, **kwargs):
+    """Create the H5 dataset based on an existing H5 dataset on the machine."""
     if not os.path.exists(path_to_h5_train):
         logger.error(
             f"Unable to find h5 file for training file at {path_to_h5_train}",
@@ -62,6 +65,7 @@ def make_h5_datasets(path_to_h5_train: str, **kwargs):
         )
         raise Exception
 
+    # Read h5
     with h5py.File(path_to_h5_train, mode='r') as h5_file:
         labels = h5_file['labels'][()].flatten()
         files = h5_file['images']
@@ -93,18 +97,26 @@ def make_train_and_valid_loaders(
     random_seed = '',
     **kwargs
 ):
+    """Create two dataloaders, one for training data and one for validation data."""
     nr_images: Optional[int] = max_images if max_images >= 0 else None
 
     # Create the datasets
     if use_h5:
+        logger.info("Creating the celeb and imagenet dataset from the h5 file!")
         celeb_dataset, imagenet_dataset = make_h5_datasets(**kwargs)
     else:
+        logger.info("Creating the Imagenet and CelebDataset")
         imagenet_dataset = ImagenetDataset(path_to_images=path_to_imagenet_images, **kwargs)
         celeb_dataset = CelebDataset(path_to_images=path_to_celeba_images, **kwargs)
 
     # Split both datasets into training and validation
     celeb_train, celeb_valid = split_dataset(celeb_dataset, train_size, random_seed, nr_images)
     imagenet_train, imagenet_valid = split_dataset(imagenet_dataset, train_size, random_seed, nr_images)
+    logger.info(f"Sizes of dataset are:\n"
+                f"Celeb-train: {len(celeb_train)}\n"
+                f"Celeb-valid: {len(celeb_valid)}\n"
+                f"Imagenet-train: {len(imagenet_train)}\n"
+                f"Imagenet-valid: {len(imagenet_valid)}\n")
 
     # Nonfaces loaders
     train_nonfaces_loader: DataLoader = DataLoader(imagenet_train, batch_size=int(batch_size / 2), shuffle=shuffle, num_workers=num_workers)
@@ -123,12 +135,14 @@ def make_train_and_valid_loaders(
     train_faces_loader: DataLoader = DataLoader(celeb_train, sampler=train_sampler, batch_size=int(batch_size / 2), num_workers=num_workers)
     valid_faces_loader: DataLoader = DataLoader(celeb_valid, batch_size=int(batch_size / 2), shuffle=shuffle, num_workers=num_workers)
 
+    # Make tuple of the data-loaders
     train_loaders: DataLoaderTuple = DataLoaderTuple(train_faces_loader, train_nonfaces_loader)
     valid_loaders: DataLoaderTuple = DataLoaderTuple(valid_faces_loader, valid_nonfaces_loader)
 
     return train_loaders, valid_loaders
 
 class EvalDatasetType(Enum):
+    """Defines a enumerator the makes it possible to double check dataset types."""
     PBB_ONLY = 'ppb'
     IMAGENET_ONLY = 'imagenet'
     H5_IMAGENET_ONLY = 'h5_imagenet'
@@ -146,6 +160,7 @@ def make_eval_loader(
     dataset_type: str = EvalDatasetType.PBB_ONLY.value,
     **kwargs
 ):
+    """Creates an evaluaion data loader."""
     if dataset_type == EvalDatasetType.PBB_ONLY.value:
         logger.info('Evaluating on PPB')
 
@@ -178,9 +193,10 @@ def make_eval_loader(
             **kwargs
         )
 
+    # If max images, sample only a smaller amount
     nr_images: Optional[int] = max_images if max_images >= 0 else None
-
     if nr_images:
+        logger.info(f"Evaluation on a sub-set of {nr_images} nr images")
         dataset = subsample_dataset(dataset, nr_images, random=True)
 
     # Concat and wrap with loader
@@ -189,6 +205,7 @@ def make_eval_loader(
     return data_loader
 
 def subsample_dataset(dataset: Dataset, nr_subsamples: int, random=False):
+    """Create a specified number of subsamples from a dataset."""
     idxs = np.arange(nr_subsamples)
 
     if random:
@@ -198,12 +215,14 @@ def subsample_dataset(dataset: Dataset, nr_subsamples: int, random=False):
 
 
 def sample_dataset(dataset: Dataset, nr_samples: int):
+    """Create a tensor stack of a specified number from a given dataset."""
     max_nr_items: int = min(nr_samples, len(dataset))
     idxs = np.random.permutation(np.arange(len(dataset)))[:max_nr_items]
 
     return torch.stack([dataset[idx][0] for idx in idxs])
 
 def sample_idxs_from_loaders(idxs, data_loaders, label):
+    """Returns data id's from a DataLoaderTupler."""
     if label == 1:
         dataset = data_loaders.faces.dataset.dataset
     else:
@@ -212,6 +231,7 @@ def sample_idxs_from_loaders(idxs, data_loaders, label):
     return torch.stack([dataset[idx.item()][0] for idx in idxs])
 
 def sample_idxs_from_loader(idxs, data_loader, label):
+    """Returns data id's from a dataloader."""
     if label == 1:
         dataset = data_loader.dataset.dataset
     else:
@@ -220,6 +240,7 @@ def sample_idxs_from_loader(idxs, data_loader, label):
     return torch.stack([dataset[idx.item()][0] for idx in idxs])
 
 def make_hist_loader(dataset, batch_size):
+    """Retrun a data loader that return histograms from the data."""
     sampler = SequentialSampler(dataset)
     batch_sampler = BatchSampler(sampler, batch_size=batch_size, drop_last=False)
 

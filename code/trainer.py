@@ -53,7 +53,7 @@ class Trainer:
         self.run_folder = run_folder
 
         self.config = config
-        
+
         new_model: Db_vae = Db_vae(
             z_dim=z_dim,
             hist_size=hist_size,
@@ -96,12 +96,18 @@ class Trainer:
                     tip=f"Check if the directory results/{self.path_to_model} exists."
                 )
                 raise Exception
-            
+
             logger.info(f"Initializing model from {self.path_to_model}")
             return Db_vae.init(self.path_to_model, self.device, self.z_dim).to(self.device)
 
-        # Model is newly initialized 
-        logger.info(f"Creating new model.")
+        # Model is newly initialized
+        logger.info(f"Creating new model with the following parameters:\n"
+                    f"z_dim: {self.z_dim}\n"
+                    f"hist_size: {self.hist_size}\n"
+                    f"alpha: {self.alpha}\n"
+                    f"num_bins: {self.num_bins}\n"
+        )
+
         return Db_vae(
             z_dim=self.z_dim,
             hist_size=self.hist_size,
@@ -144,7 +150,7 @@ class Trainer:
 
         logger.success(f"Finished training on {epochs} epochs.")
 
-        
+
     def print_reconstruction(self, model, data, epoch, device, n_rows=4, save=True):
         # TODO: Add annotation
         model.eval()
@@ -195,7 +201,7 @@ class Trainer:
         path_to_model = f"results/{self.run_folder}/model.pt"
         torch.save(self.model.state_dict(), path_to_model)
 
-        logger.save("Stored model and results")
+        logger.save(f"Stored model and results at results/{self.run_folder}")
 
     def visualize_bias(self, probs, data_loader, all_labels, all_index, epoch, n_rows=3):
         # TODO: Add annotation
@@ -208,7 +214,7 @@ class Trainer:
         worst_imgs = utils.sample_idxs_from_loader(all_index[lowest_probs], data_loader, 1)
 
         img_list = (highest_imgs, worst_imgs)
-        titles = ("Highest", "Lowest")
+        titles = ("Highest weights", "Lowest weights")
         fig = plt.figure(figsize=(16, 16))
 
         for i in range(2):
@@ -219,7 +225,10 @@ class Trainer:
 
             utils.remove_frame(plt)
 
-        fig.savefig('results/{}/bias_probs/epoch={}'.format(self.config.run_folder, epoch), bbox_inches='tight')
+        path_to_results = f"results/{self.config.run_folder}/bias_props/epoch={epoch}"
+        logger.save("Saving a bias probability figure in {path_to_results}")
+
+        fig.savefig(path_to_results, bbox_inches='tight')
         plt.close()
 
 
@@ -334,22 +343,22 @@ class Trainer:
                 all_labels = torch.cat((all_labels, labels))
                 all_index = torch.cat((all_index, index))
 
-                if self.debias_type == "base" or self.debias_type == "logsum":
+                if self.debias_type == "max" or self.debias_type == "max5":
                     self.model.build_means(images)
 
-                elif self.debias_type == "our":
+                elif self.debias_type == "gaussian":
                     self.model.build_histo(images)
 
-            if self.debias_type == "base":
-                probs = self.model.get_histo_base()
-            elif self.debias_type == "logsum":
-                probs = self.model.get_histo_logsum()
-            elif self.debias_type == "our":
-                probs = self.model.get_histo_our()
+            if self.debias_type == "max":
+                probs = self.model.get_histo_max()
+            elif self.debias_type == "max5":
+                probs = self.model.get_histo_max5()
+            elif self.debias_type == "gaussian":
+                probs = self.model.get_histo_gaussian()
             else:
                 logger.error("No correct debias method given!",
                             next_step="The program will now close",
-                            tip="Set --debias_method to 'base' or 'our'.")
+                            tip="Set --debias_method to 'max', 'max5' or 'gaussian'.")
                 raise Exception()
 
         self.visualize_bias(probs, data_loader, all_labels, all_index, epoch)
@@ -377,7 +386,7 @@ class Trainer:
 
         return
 
-    
+
     def visualize_best_and_worst(self, data_loaders, all_labels, all_indices, epoch, best_faces, worst_faces, best_other, worst_other, n_rows=4, save=True):
         # TODO: Add annotation
         n_samples = n_rows**2
