@@ -12,6 +12,13 @@ import utils
 import torch.nn as nn
 from datasets.data_utils import slide_windows_over_img
 from dataclasses import asdict
+import os
+
+# Set path to current directory
+abspath = os.path.abspath(__file__)
+dname = os.path.dirname(abspath)
+os.chdir(dname)
+
 
 def make_trainer(config: Config, load_model: bool = False):
      return Trainer(
@@ -91,7 +98,7 @@ if __name__ == "__main__":
           evaluator = make_evaluator(config)
           evaluator.eval_on_setups('run_mode')
      else:
-          logger.info("Running training and evaluation this model")
+          logger.info("Running training and evaluation of this model")
 
           trainer = make_trainer(config)
           trainer.train()

@@ -3,6 +3,11 @@ import os
 import urllib.request
 import tarfile
 
+# Set path to current directory
+abspath = os.path.abspath(__file__)
+dname = os.path.dirname(abspath)
+os.chdir(dname)
+
 def ensure_path(path):
     if not os.path.exists(path):
         os.makedirs(os.path.dirname(path), exist_ok=True)

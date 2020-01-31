@@ -101,7 +101,12 @@ class Trainer:
             return Db_vae.init(self.path_to_model, self.device, self.z_dim).to(self.device)
 
         # Model is newly initialized 
-        logger.info(f"Creating new model.")
+        logger.info(f"Creating new model with the following parameters:\n"
+                    f"z_dim: {self.z_dim}\n"
+                    f"hist_size: {self.hist_size}\n"
+                    f"alpha: {self.alpha}\n"
+                    f"num_bins: {self.num_bins}\n"
+        )
         return Db_vae(
             z_dim=self.z_dim,
             hist_size=self.hist_size,
@@ -195,7 +200,7 @@ class Trainer:
         path_to_model = f"results/{self.run_folder}/model.pt"
         torch.save(self.model.state_dict(), path_to_model)
 
-        logger.save("Stored model and results")
+        logger.save(f"Stored model and results at results/{self.run_folder}")
 
     def visualize_bias(self, probs, data_loader, all_labels, all_index, epoch, n_rows=3):
         # TODO: Add annotation
@@ -219,7 +224,10 @@ class Trainer:
 
             utils.remove_frame(plt)
 
-        fig.savefig('results/{}/bias_probs/epoch={}'.format(self.config.run_folder, epoch), bbox_inches='tight')
+        path_to_results = f"results/{self.config.run_folder}/bias_props/epoch={epoch}"
+        logger.save("Saving a bias probability figure in {path_to_results}")
+
+        fig.savefig(path_to_results, bbox_inches='tight')
         plt.close()
 
 

@@ -33,7 +33,7 @@ class Logger:
         full_datetime_stamp = current_datetime.strftime("%d_%m_%Y-%H_%M_%S")
         current_date_stamp = current_datetime.strftime("%d_%m_%Y")
 
-        log = logging.getLogger('my_logger')
+        log = logging.getLogger('DebiasingModel')
         handler = logging.StreamHandler(sys.stdout)
         handler.setLevel(logging.INFO)
         formatter = logging.Formatter(

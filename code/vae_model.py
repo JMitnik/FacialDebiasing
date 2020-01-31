@@ -169,6 +169,7 @@ class Db_vae(nn.Module):
         model: Db_vae = Db_vae(z_dim=z_dim, device=device)
         model.load_state_dict(torch.load(full_path_to_model, map_location=device))
 
+        logger.info(f"Loaded model from {path_to_model}!")
         return model
 
 
