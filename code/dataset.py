@@ -188,7 +188,7 @@ def make_eval_loader(
 
         dataset = H5Imagenet(
             path_to_images='',
-            h5_dataset=h5_nonfaces.dataset,
+            h5_dataset=h5_nonfaces.store,
             get_sub_images=True,
             **kwargs
         )
