@@ -227,7 +227,7 @@ class Trainer:
             utils.remove_frame(plt)
 
         path_to_results = f"results/{self.config.run_folder}/bias_probs/epoch={epoch}"
-        logger.save("Saving a bias probability figure in {path_to_results}")
+        logger.save(f"Saving a bias probability figure in {path_to_results}")
 
         fig.savefig(path_to_results, bbox_inches='tight')
         plt.close()
