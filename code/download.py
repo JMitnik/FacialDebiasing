@@ -2,6 +2,7 @@
 import os
 import urllib.request
 import tarfile
+import pandas as pd
 
 # Set path to current directory
 abspath = os.path.abspath(__file__)
@@ -37,6 +38,9 @@ if not os.path.exists(path_to_test_data):
     with tarfile.open(f"{path_to_test_data}", "r:") as tar:
         members = [tar_mem for tar_mem in tar.getmembers()]
         tar.extractall(os.path.dirname(path_to_test_data), members=members)
-
 else:
     print("Test data already exists.")
+
+# Change the bi.fitz column name
+path_to_ppb_metadata = 'data/ppb/PPB-2017/PPB-2017-metadata.csv'
+pd.read_csv(path_to_ppb_metadata).rename(columns={'bi.fitz': 'bi_fitz'}).to_csv(path_to_ppb_metadata, index=False)
