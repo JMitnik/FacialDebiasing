@@ -3,7 +3,7 @@ Affiliation: University of Amsterdam
 
 Students: 
    * Lucas Fijen (10813268), lucas.fijen@gmail.com
-   * Dante Nieuwenhuis (11058595), d.niewenhuis@hotmail.com 
+   * Dante Niewenhuis (11058595), d.niewenhuis@hotmail.com 
    * Jonathan Mitnik (10911197), jmitnik@gmail.com 
    * Pieter de Marez Oyens (10002403), oyenspieter@gmail.com
 
